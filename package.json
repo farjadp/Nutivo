@@ -15,7 +15,8 @@
     "db:status": "pnpm --filter @nutivo/db db:status",
     "db:figfit": "pnpm --filter @nutivo/db db:figfit",
     "bot": "pnpm --filter @nutivo/bot dev",
-    "bot:sim": "pnpm --filter @nutivo/bot sim"
+    "bot:sim": "pnpm --filter @nutivo/bot sim",
+    "mobile": "pnpm --filter @nutivo/mobile dev"
   },
   "devDependencies": {
     "typescript": "^5.9.2"

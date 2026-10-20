@@ -12,6 +12,7 @@ input (text | photo | quick) → Claude extract_meal (JSON) → resolve (foods_f
 - `packages/db`: مهاجرت‌های Supabase، CSV غذاهای ایرانی، اعتبارسنج seed.
 - `apps/web`: Next.js 15، RTL، Vazirmatn. Server Actions برای ثبت؛ Route Handler برای cron گزارش شبانه.
 - `apps/bot` (فاز ۲)، `apps/mobile` (فاز ۳): فقط رابط روی همان core و همان جدول‌ها.
+- `apps/mobile`: Expo SDK 57، Expo Router، Uniwind (Tailwind 4). ورود با کد ایمیلی Supabase؛ همه کارها از `POST /api/app/<action>` در وب‌اپ با `Authorization: Bearer <access token>` کاربر. این مسیر همان سرویس بات (`features/bot/api/service.server.ts`) را با `channel: "mobile"` صدا می‌زند، پس ثبت، پیش‌نویس، روز و گزارش در هر سه کانال یکی است.
 
 ## جریان عکس
 ۱) آپلود به Supabase Storage (bucket خصوصی `meal-photos`) ۲) Claude vision با همان tool `extract_meal`، `from_photo=true` ۳) هر آیتم `is_estimated=true` ۴) صفحه تأیید همان صفحه متن است.

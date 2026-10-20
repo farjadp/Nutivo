@@ -1,0 +1,61 @@
+@import "tailwindcss";
+@import "uniwind";
+
+/*
+ * Nutivo brand tokens, same values as apps/web/src/app/globals.css.
+ * green = what the user does · purple = what Nutivo analyses · neutrals carry ~70%.
+ * Text on green uses green-ink (4.9:1); green is for fills, rings, large shapes.
+ */
+@layer theme {
+  :root {
+    @variant light {
+      --color-ground: #faf9f6;
+      --color-surface: #ffffff;
+      --color-ink: #20252b;
+      --color-ink-2: #667085;
+      --color-line: #e5e7eb;
+      --color-green: #00a693;
+      --color-green-ink: #007f71;
+      --color-mint: #eaf8f5;
+      --color-purple: #66023c;
+      --color-purple-ink: #66023c;
+      --color-purple-tint: #f5eaf0;
+      --color-carbs: #2563eb;
+      --color-fat: #d97706;
+      --color-fat-ink: #a35a04;
+      --color-success: #16803c;
+      --color-error: #dc2626;
+      --color-track: #eef0f2;
+      --color-on-green: #ffffff;
+    }
+    @variant dark {
+      --color-ground: #101315;
+      --color-surface: #181c1f;
+      --color-ink: #eceef0;
+      --color-ink-2: #9aa3ae;
+      --color-line: #2a3136;
+      --color-green: #1fbfa9;
+      --color-green-ink: #3fd3bf;
+      --color-mint: #10302b;
+      --color-purple: #c86a9f;
+      --color-purple-ink: #e3a3c6;
+      --color-purple-tint: #2a1822;
+      --color-carbs: #6b9bf5;
+      --color-fat: #f0a43a;
+      --color-fat-ink: #f3b45e;
+      --color-success: #4cc27a;
+      --color-error: #f26b6b;
+      --color-track: #252b30;
+      --color-on-green: #101315;
+    }
+  }
+}
+
+/* IRANYekanX (Persian digits build). React Native picks the face by family name, not by weight. */
+@theme {
+  --font-body: "IRANYekanXFaNum-Regular";
+  --font-strong: "IRANYekanXFaNum-Bold";
+  --font-heavy: "IRANYekanXFaNum-Black";
+  --radius-card: 16px;
+  --radius-btn: 12px;
+}

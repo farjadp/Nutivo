@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "Nutivo",
+    "slug": "nutivo",
+    "scheme": "nutivo",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/brand/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.ashavid.nutivo",
+      "supportsTablet": false,
+      "infoPlist": {
+        "CFBundleDevelopmentRegion": "fa",
+        "CFBundleAllowMixedLocalizations": true
+      }
+    },
+    "android": {
+      "package": "com.ashavid.nutivo",
+      "adaptiveIcon": {
+        "backgroundColor": "#007F71",
+        "foregroundImage": "./assets/brand/adaptive-foreground.png",
+        "monochromeImage": "./assets/brand/adaptive-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/IRANYekanXFaNum-Regular.ttf",
+            "./assets/fonts/IRANYekanXFaNum-Bold.ttf",
+            "./assets/fonts/IRANYekanXFaNum-Black.ttf"
+          ]
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/brand/splash-icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#007F71"
+        }
+      ],
+      ["expo-localization", { "supportsRTL": true, "forcesRTL": true }]
+    ],
+    "extra": { "supportsRTL": true, "forcesRTL": true },
+    "experiments": { "typedRoutes": true }
+  }
+}
