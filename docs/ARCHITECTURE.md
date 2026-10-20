@@ -21,3 +21,9 @@ Route Handler `/api/cron/nightly` (Vercel Cron، هر ساعت) → برای ک�
 
 ## محیط
 `apps/web/.env.example` را کپی کن. کلیدها هرگز در کد نیستند.
+
+## Supabase (production project)
+- پروژه: `Nutivo` در سازمان Ashavid، منطقه `ca-central-1`، شناسه `jspcgzwdowgzmcpcstnu` (۲۰ اکتبر ۲۰۲۶).
+- مهاجرت‌های اعمال‌شده: `0001_init`، `0002_search_storage`، `0003_rls_perf`.
+- seed: ۲۵ غذا و ۵۹ واحد. ستون `notes` در دیتابیس خالی است؛ یادداشت‌های بازبینی فقط در CSV مخزن هستند.
+- Auth: Site URL پیش‌فرض `http://localhost:3000`. قبل از استقرار، دامنه واقعی را در Authentication → URL Configuration اضافه کن. ایمیل داخلی Supabase محدودیت ارسال ساعتی دارد؛ برای کاربران واقعی SMTP اختصاصی لازم است.
