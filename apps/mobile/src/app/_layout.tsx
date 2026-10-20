@@ -59,6 +59,8 @@ function Routes() {
       <Stack.Protected guard={signedIn && Boolean(me?.has_goals)}>
         <Stack.Screen name="index" />
         <Stack.Screen name="log" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
+        <Stack.Screen name="item" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
+        <Stack.Screen name="report" options={{ animation: "slide_from_left" }} />
       </Stack.Protected>
     </Stack>
   );

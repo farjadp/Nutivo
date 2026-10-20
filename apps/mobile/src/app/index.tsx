@@ -1,19 +1,20 @@
-import type { DayView } from "@nutivo/core";
-import { toPersianDigits } from "@nutivo/core";
+import { daySeed, nutiSay, type AppDay, type AppItem, type NutiSituation } from "@nutivo/core";
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
-import { Pressable, RefreshControl, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PanResponder, Pressable, RefreshControl, View } from "react-native";
+import { DayStrip } from "@/features/day/day-strip";
 import { api } from "@/lib/api";
+import { addDays, faDayLabel, faDayWord, faInt } from "@/lib/format";
+import { MEALS } from "@/lib/meals";
 import { useSession } from "@/lib/session";
 import { useUndo } from "@/lib/undo";
 import { Button } from "@/ui/button";
+import { FoodIconTile } from "@/ui/food-icon";
 import { Logo } from "@/ui/logo";
+import { NutiSays } from "@/ui/nuti";
 import { Ring } from "@/ui/ring";
 import { Screen } from "@/ui/screen";
 import { Text } from "@/ui/text";
-
-const MEAL: Record<DayView["meals"][number]["meal_type"], string> = { breakfast: "صبحانه", lunch: "ناهار", snack: "میان‌وعده", dinner: "شام" };
-const fa = (n: number) => toPersianDigits(Math.round(n));
 
 function Macro({ label, value, goal, bar, ink }: { label: string; value: number; goal: number; bar: string; ink: string }) {
   const pct = goal > 0 ? Math.min(100, Math.round((value / goal) * 100)) : 0;
@@ -22,39 +23,102 @@ function Macro({ label, value, goal, bar, ink }: { label: string; value: number;
       <View className="flex-row items-baseline justify-between">
         <Text className="text-xs text-ink-2">{label}</Text>
         <Text className={`font-strong text-xs ${ink}`}>
-          {fa(value)}<Text className="text-xs text-ink-2">/{fa(goal)}</Text>
+          {faInt(value)}<Text className="text-xs text-ink-2">/{faInt(goal)}</Text>
         </Text>
       </View>
       <View className="h-2 overflow-hidden rounded-full bg-track">
+        {/* Width is data, so it cannot be a class. */}
         <View className={`h-2 rounded-full ${bar}`} style={{ width: `${pct}%` }} />
       </View>
     </View>
   );
 }
 
+/** Which of نوتی's lines fits today. Numbers come from the engine's day view only. */
+function situation(d: AppDay): { key: NutiSituation; vars: Record<string, string> } {
+  const { day } = d;
+  if (!d.items.length) return { key: "empty", vars: {} };
+  if (day.complete) return { key: "complete", vars: {} };
+  if (day.remaining.kcal < -day.goals.kcal * 0.1) return { key: "over", vars: { over: faInt(-day.remaining.kcal) } };
+  if (day.streak >= 3) return { key: "streak", vars: { streak: faInt(day.streak) } };
+  if (day.remaining.protein_g > day.goals.protein_g * 0.4 && day.remaining.kcal > 0) return { key: "proteinLow", vars: { protein: faInt(day.remaining.protein_g) } };
+  return { key: "onTrack", vars: { kcal: faInt(Math.max(0, day.remaining.kcal)) } };
+}
+
+function ItemRow({ it }: { it: AppItem }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${it.name}، ${faInt(it.kcal)} کالری. ویرایش`}
+      onPress={() => router.push({ pathname: "/item", params: { item: JSON.stringify(it) } })}
+      className="flex-row items-center gap-3 rounded-btn py-1.5 active:bg-track"
+    >
+      <FoodIconTile name={it.name} estimated={it.estimated} />
+      <View className="min-w-0 flex-1">
+        <Text className="text-[15px]" numberOfLines={1}>{it.name}</Text>
+        <Text className="text-xs text-ink-2">{it.estimated ? "≈ " : ""}{faInt(it.grams)} گرم</Text>
+      </View>
+      <Text className="text-sm text-ink-2">{it.estimated ? "≈" : ""}{faInt(it.kcal)}</Text>
+    </Pressable>
+  );
+}
+
 export default function Today() {
   const { signOut, me } = useSession();
   const { version } = useUndo();
-  const [day, setDay] = useState<DayView | null>(null);
+  const [data, setData] = useState<AppDay | null>(null);
+  const [date, setDate] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (d?: string) => {
     setLoading(true);
-    const r = await api.today();
+    const r = await api.day(d);
     setLoading(false);
     if (r.ok) {
-      setDay(r.data);
+      setData(r.data);
       setError(null);
     } else setError(r.error);
   }, []);
-  // Reload on open and after every save or undo.
+
+  // Reload on open, on day change and after every save, edit or undo.
   useEffect(() => {
-    void load();
-  }, [load, version]);
+    void load(date);
+  }, [load, date, version]);
+
+  const today = data?.day.today;
+  const shown = data?.day.date;
+  const oldest = data?.strip[0]?.date;
+  const go = useCallback(
+    (delta: number) => {
+      if (!shown || !today || !oldest) return;
+      const next = addDays(shown, delta);
+      if (next > today || next < oldest) return;
+      setDate(next);
+    },
+    [shown, today, oldest],
+  );
+
+  // Horizontal swipe changes day: in RTL a swipe to the right brings the older day in from the left.
+  const goRef = useRef(go);
+  goRef.current = go;
+  const pan = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 24 && Math.abs(g.dx) > Math.abs(g.dy) * 2,
+        onPanResponderRelease: (_, g) => {
+          if (Math.abs(g.dx) > 60) goRef.current(g.dx > 0 ? -1 : 1);
+        },
+      }),
+    [],
+  );
+
+  const isToday = shown === today;
+  const nuti = data && isToday ? situation(data) : null;
+  const line = nuti && shown ? nutiSay(nuti.key, nuti.vars, daySeed(shown)) : null;
 
   return (
-    <Screen refreshControl={<RefreshControl refreshing={loading} onRefresh={load} colorsClassName="accent-green" tintColorClassName="accent-green" />}>
+    <Screen refreshControl={<RefreshControl refreshing={loading && Boolean(data)} onRefresh={() => load(date)} colorsClassName="accent-green" tintColorClassName="accent-green" />}>
       <View className="flex-row items-center justify-between">
         <Logo height={28} />
         <Pressable accessibilityRole="button" accessibilityLabel="خروج از حساب" onPress={signOut} className="rounded-full px-3 py-2 active:bg-track">
@@ -62,55 +126,79 @@ export default function Today() {
         </Pressable>
       </View>
 
+      {data && today && shown && <DayStrip strip={data.strip} today={today} selected={shown} onSelect={(d) => setDate(d)} />}
+
       {error && (
         <View className="gap-3 rounded-card bg-surface p-4">
           <Text accessibilityRole="alert" className="text-sm text-error">{error}</Text>
-          <Button label="دوباره" variant="quiet" onPress={load} />
+          <Button label="دوباره" variant="quiet" onPress={() => load(date)} />
         </View>
       )}
 
-      {day && (
-        <>
+      {data && today && shown && (
+        <View className="gap-6" {...pan.panHandlers}>
           <View className="items-center gap-4 rounded-card border border-line bg-surface p-5">
-            <Text className="font-strong self-start text-base">امروز</Text>
-            <Ring value={day.totals.kcal} goal={day.goals.kcal}>
-              <Text className="font-heavy text-[34px] leading-[44px]">{fa(Math.abs(day.remaining.kcal))}</Text>
-              <Text className="text-xs text-ink-2">{day.remaining.kcal >= 0 ? "کالری مانده" : "کالری بیشتر از هدف"}</Text>
+            <View className="flex-row items-center justify-between self-stretch">
+              <View>
+                {/* «امروز» / «دیروز» get the date underneath; older days show the date as the title. */}
+                <Text className="font-strong text-base">{["امروز", "دیروز"].includes(faDayWord(shown, today)) ? faDayWord(shown, today) : faDayLabel(shown)}</Text>
+                {faDayWord(shown, today) === "دیروز" && <Text className="text-xs text-ink-2">{faDayLabel(shown)}</Text>}
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push({ pathname: "/report", params: { date: shown } })}
+                className="rounded-full bg-purple-tint px-3 py-1.5 active:opacity-80"
+              >
+                <Text className="font-strong text-xs text-purple-ink">گزارش {faDayWord(shown, today)}</Text>
+              </Pressable>
+            </View>
+            <Ring value={data.day.totals.kcal} goal={data.day.goals.kcal}>
+              <Text className="font-heavy text-[34px] leading-[44px]">{faInt(Math.abs(data.day.remaining.kcal))}</Text>
+              <Text className="text-xs text-ink-2">{data.day.remaining.kcal >= 0 ? "کالری مانده" : "کالری بیشتر از هدف"}</Text>
             </Ring>
             <View className="w-full flex-row gap-4">
-              <Macro label="پروتئین" value={day.totals.protein_g} goal={day.goals.protein_g} bar="bg-purple" ink="text-purple-ink" />
-              <Macro label="کربو" value={day.totals.carbs_g} goal={day.goals.carbs_g} bar="bg-carbs" ink="text-carbs" />
-              <Macro label="چربی" value={day.totals.fat_g} goal={day.goals.fat_g} bar="bg-fat" ink="text-fat-ink" />
+              <Macro label="پروتئین" value={data.day.totals.protein_g} goal={data.day.goals.protein_g} bar="bg-purple" ink="text-purple-ink" />
+              <Macro label="کربو" value={data.day.totals.carbs_g} goal={data.day.goals.carbs_g} bar="bg-carbs" ink="text-carbs" />
+              <Macro label="چربی" value={data.day.totals.fat_g} goal={data.day.goals.fat_g} bar="bg-fat" ink="text-fat-ink" />
             </View>
-            {day.streak > 1 && <Text className="text-xs text-green-ink">زنجیره {fa(day.streak)} روزه</Text>}
+            {data.day.streak > 1 && isToday && <Text className="text-xs text-green-ink">زنجیره {faInt(data.day.streak)} روزه</Text>}
           </View>
 
-          <Button label="ثبت وعده" onPress={() => router.push("/log")} />
+          {line && <NutiSays mood={line.mood} text={line.text} />}
 
-          {day.meals.length ? (
+          <Button
+            label={isToday ? "ثبت وعده" : `ثبت وعده برای ${faDayWord(shown, today)}`}
+            onPress={() => router.push(isToday ? "/log" : { pathname: "/log", params: { date: shown } })}
+          />
+
+          {data.items.length ? (
             <View className="gap-3">
-              {day.meals.map((m) => (
-                <View key={m.meal_type} className="gap-2 rounded-card border border-line bg-surface p-4">
-                  <View className="flex-row justify-between">
-                    <Text className="font-strong text-[15px]">{MEAL[m.meal_type]}</Text>
-                    <Text className="text-sm text-ink-2">{fa(m.kcal)} کالری</Text>
-                  </View>
-                  {m.items.map((it, i) => (
-                    <View key={i} className="flex-row justify-between">
-                      <Text className="text-sm">{it.name}{it.estimated ? " ~" : ""}</Text>
-                      <Text className="text-sm text-ink-2">{fa(it.kcal)}</Text>
+              {MEALS.map(({ v, l }) => {
+                const list = data.items.filter((i) => i.meal_type === v);
+                if (!list.length) return null;
+                const kcal = list.reduce((s, i) => s + i.kcal, 0);
+                return (
+                  <View key={v} className="gap-1 rounded-card border border-line bg-surface p-4">
+                    <View className="mb-1 flex-row justify-between">
+                      <Text className="font-strong text-[15px]">{l}</Text>
+                      <Text className="text-sm text-ink-2">{faInt(kcal)} کالری</Text>
                     </View>
-                  ))}
-                </View>
-              ))}
+                    {list.map((it) => (
+                      <ItemRow key={it.id} it={it} />
+                    ))}
+                  </View>
+                );
+              })}
+              <Text className="text-center text-xs text-ink-2">برای ویرایش یا حذف، روی هر غذا بزن.</Text>
             </View>
           ) : (
-            <View className="gap-1 rounded-card bg-mint p-4">
-              <Text className="font-strong text-[15px] text-green-ink">امروز هنوز چیزی ثبت نشده</Text>
-              <Text className="text-sm leading-6 text-ink-2">بنویس چه خوردی یا از بشقابت عکس بگیر. وعده‌هایی که از وب یا تلگرام ثبت کنی هم اینجا می‌آیند.</Text>
-            </View>
+            !isToday && (
+              <View className="rounded-card bg-track p-4">
+                <Text className="text-sm leading-6 text-ink-2">برای این روز چیزی ثبت نشده.</Text>
+              </View>
+            )
           )}
-        </>
+        </View>
       )}
       {me?.email && <Text className="pb-16 text-center text-xs text-ink-2">{me.email}</Text>}
     </Screen>

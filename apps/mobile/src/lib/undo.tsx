@@ -12,8 +12,10 @@ interface Saved {
 interface UndoState {
   /** Show «ثبت شد» with a «برگردان» button for a few seconds. */
   saved: (s: Saved) => void;
-  /** Bumped after a meal is saved or undone, so screens can reload. */
+  /** Bumped after a meal is saved, edited or undone, so screens can reload. */
   version: number;
+  /** Ask screens to reload (after an edit or delete). */
+  refresh: () => void;
 }
 
 const Ctx = createContext<UndoState | null>(null);
@@ -61,7 +63,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <Ctx.Provider value={{ saved: show, version }}>
+    <Ctx.Provider value={{ saved: show, version, refresh: () => setVersion((v) => v + 1) }}>
       {children}
       {item && (
         <Animated.View pointerEvents="box-none" className="absolute inset-x-4" style={{ opacity: fade, bottom: insets.bottom + 12 }}>

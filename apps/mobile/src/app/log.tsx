@@ -1,8 +1,9 @@
 import type { DraftView } from "@nutivo/core";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Image, Pressable, TextInput, View } from "react-native";
 import { api, type DraftChange } from "@/lib/api";
+import { atTimeOn, faDayWord, localToday } from "@/lib/format";
 import { mealLabel } from "@/lib/meals";
 import { pickPhoto, type PickedPhoto } from "@/lib/photo";
 import { useUndo } from "@/lib/undo";
@@ -16,6 +17,8 @@ const DENIED = "دسترسی داده نشد. از تنظیمات گوشی اج�
 
 export default function Log() {
   const { saved } = useUndo();
+  // Set when logging to a past day from the day strip.
+  const { date } = useLocalSearchParams<{ date?: string }>();
   const [text, setText] = useState("");
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [draft, setDraft] = useState<DraftView | null>(null);
@@ -35,7 +38,11 @@ export default function Log() {
     if (!text.trim() && !photo) return setError("بنویس چه خوردی یا یک عکس بگذار.");
     setError(null);
     setPhase("reading");
-    const r = await api.draft({ text: text.trim() || undefined, photo: photo ? { base64: photo.base64, mediaType: photo.mediaType } : undefined });
+    const r = await api.draft({
+      text: text.trim() || undefined,
+      photo: photo ? { base64: photo.base64, mediaType: photo.mediaType } : undefined,
+      now: date ? atTimeOn(date) : undefined,
+    });
     if (!r.ok) {
       setPhase("input");
       return setError(r.error);
@@ -73,7 +80,10 @@ export default function Log() {
   return (
     <Screen>
       <View className="flex-row items-center justify-between">
-        <Text className="font-heavy text-[22px] leading-[34px]">{phase === "review" ? "درست فهمیدم؟" : "چی خوردی؟"}</Text>
+        <View>
+          <Text className="font-heavy text-[22px] leading-[34px]">{phase === "review" ? "درست فهمیدم؟" : "چی خوردی؟"}</Text>
+          {date && <Text className="text-xs text-ink-2">برای {faDayWord(date, localToday())}</Text>}
+        </View>
         <Pressable accessibilityRole="button" accessibilityLabel="بستن" onPress={close} className="size-10 items-center justify-center rounded-full active:bg-track">
           <Text className="text-xl text-ink-2">×</Text>
         </Pressable>

@@ -1,4 +1,4 @@
-import type { BotResult, DayView, DraftView, Goals, ReportView } from "@nutivo/core";
+import type { AppDay, BotResult, DayView, DraftView, Goals, ReportView } from "@nutivo/core";
 import { config } from "./config";
 import { supabase } from "./supabase";
 
@@ -47,12 +47,16 @@ async function call<T>(action: string, body: object = {}): Promise<ApiResult<T>>
 export const api = {
   me: () => call<Me>("me"),
   onboard: (profile: ProfileInput) => call<Goals>("onboard", { profile }),
-  today: (date?: string) => call<DayView>("today", { date }),
-  draft: (input: { text?: string; photo?: { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" } }) =>
-    call<DraftView>("draft", { ...input, now: new Date().toISOString() }),
+  day: (date?: string) => call<AppDay>("day", { date }),
+  /** `now` defaults to this instant; pass another one to log to a past day. */
+  draft: (input: { text?: string; photo?: { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" }; now?: string }) =>
+    call<DraftView>("draft", { ...input, now: input.now ?? new Date().toISOString() }),
   draftEdit: (id: string, change: DraftChange) => call<DraftView>("draft_edit", { id, change }),
   draftConfirm: (id: string) => call<{ entry_id: string; day: DayView | null }>("draft_confirm", { id }),
   draftCancel: (id: string) => call<{ cancelled: true }>("draft_cancel", { id }),
   undo: (entryId: string) => call<{ undone: true }>("undo", { entry_id: entryId }),
   report: (date?: string) => call<ReportView>("report", { date }),
+  itemUpdate: (id: string, change: { qty: number; unit: string } | { grams: number }) => call<{ updated: true }>("item_update", { id, change }),
+  itemDelete: (id: string) => call<{ deleted: true }>("item_delete", { id }),
+  units: (foodId: string) => call<string[]>("units", { food_id: foodId }),
 };
