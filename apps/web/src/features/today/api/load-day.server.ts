@@ -3,6 +3,7 @@ import { suggestRepeats, type Goals, type MealType } from "@nutivo/core";
 import { redirect } from "next/navigation";
 import type { LoggedItem } from "@/entities/day/sample";
 import { foodFromRow } from "@/entities/food/map";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { addDays } from "@/shared/lib/format";
 import { DAY_WINDOW, type DayStats } from "../model/day";
@@ -61,14 +62,25 @@ export function entryItems(e: EntryRow): LoggedItem[] {
     }));
 }
 
+/** Signed-in web user: their day, or a redirect to login / onboarding. */
 export async function loadDay(requested?: string) {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) redirect("/login");
+  const day = await loadDayFor(supabase, auth.user.id, requested);
+  if (!day) redirect("/onboarding");
+  return day;
+}
 
-  const { data: profile, error: pErr } = await supabase.from("profiles").select("*").eq("id", auth.user.id).maybeSingle();
+/**
+ * One user's day (default today in their timezone) with per-day totals and repeat suggestions.
+ * Works with the user's own client (RLS) or the service role (bot); every query is scoped to `userId`.
+ * Returns null when the user has no goals yet.
+ */
+export async function loadDayFor(supabase: SupabaseClient, userId: string, requested?: string) {
+  const { data: profile, error: pErr } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
   if (pErr) throw new Error(`profile query failed: ${pErr.message}`);
-  if (!profile?.goal_kcal) redirect("/onboarding");
+  if (!profile?.goal_kcal) return null;
 
   const tz: string = profile.timezone ?? "America/Toronto";
   const now = new Date();
@@ -81,6 +93,7 @@ export async function loadDay(requested?: string) {
   const { data, error } = await supabase
     .from("meal_entries")
     .select(ENTRY_SELECT)
+    .eq("user_id", userId)
     .eq("status", "confirmed")
     .gte("eaten_at", since)
     .order("eaten_at", { ascending: true });
@@ -118,5 +131,5 @@ export async function loadDay(requested?: string) {
   const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", hourCycle: "h23" }).format(now));
   const repeats = suggestRepeats({ history, today, hour });
 
-  return { repeats, userId: auth.user.id, timezone: tz, today, date, items, goals, pastLogDates: [...pastDates].sort(), stats };
+  return { repeats, userId, timezone: tz, today, date, items, goals, pastLogDates: [...pastDates].sort(), stats };
 }

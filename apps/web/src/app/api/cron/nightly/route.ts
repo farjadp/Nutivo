@@ -73,6 +73,10 @@ export async function GET(request: Request) {
     }
   }
 
+  // Housekeeping: Telegram drafts nobody confirmed, and expired link codes.
+  await db.from("bot_drafts").delete().lt("expires_at", now.toISOString());
+  await db.from("link_codes").delete().lt("expires_at", now.toISOString());
+
   void logEvent({ kind: "system", event: "cron.nightly", message: `${generated} generated, ${skipped} skipped, ${failed} failed`, meta: { due: due.length } });
   return NextResponse.json({ ok: true, due: due.length, generated, skipped, failed });
 }

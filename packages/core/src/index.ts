@@ -10,3 +10,4 @@ export * from "./prompts/report";
 export * from "./repeats";
 export * from "./ideas";
 export * from "./prompts/ask";
+export * from "./bot";

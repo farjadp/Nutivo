@@ -2,6 +2,8 @@ import { ChevronLeft, Shield, Target } from "lucide-react";
 import Link from "next/link";
 import { BottomNav } from "@/features/today/ui/bottom-nav";
 import { NutiToggle } from "@/features/mascot/ui/nuti-toggle";
+import { TelegramLink } from "@/features/bot/ui/telegram-link";
+import { adminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isAuthDisabled, isSupabaseConfigured } from "@/shared/config";
 
@@ -13,10 +15,19 @@ async function canSeeAdmin() {
   return Boolean(data.user?.email && admins.includes(data.user.email.toLowerCase()));
 }
 
+/** Signed-in user's Telegram link, if any ("@username" or a name). Undefined = not available (review mode). */
+async function telegramStatus(): Promise<string | null | undefined> {
+  if (isAuthDisabled() || !isSupabaseConfigured() || !isAdminConfigured()) return undefined;
+  const { data } = await (await createClient()).auth.getUser();
+  if (!data.user) return undefined;
+  const { data: link } = await adminClient().from("telegram_links").select("username, first_name").eq("user_id", data.user.id).maybeSingle();
+  return link ? (link.username ? `@${link.username}` : (link.first_name as string) ?? "") : null;
+}
+
 export const metadata = { title: "من · Nutivo" };
 
 export default async function MePage() {
-  const showAdmin = await canSeeAdmin();
+  const [showAdmin, tg] = await Promise.all([canSeeAdmin(), telegramStatus()]);
   return (
     <div className="flex min-h-dvh flex-col">
       <main className="mx-auto w-full max-w-md flex-1 px-4 pt-[max(20px,env(safe-area-inset-top))] pb-28">
@@ -35,6 +46,11 @@ export default async function MePage() {
           <li className="border-t border-line">
             <NutiToggle />
           </li>
+          {tg !== undefined && (
+            <li className="border-t border-line">
+              <TelegramLink linkedAs={tg} />
+            </li>
+          )}
           {showAdmin && (
             <li className="border-t border-line">
               <Link href="/admin" className="flex items-center gap-3 px-4 py-3.5 hover:bg-purple-tint">

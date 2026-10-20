@@ -38,3 +38,9 @@ export function aiPrices(): { input: number; output: number; assumed: boolean } 
   const set = Number.isFinite(i) && i > 0 && Number.isFinite(o) && o > 0;
   return set ? { input: i, output: o, assumed: false } : { input: 3, output: 15, assumed: true };
 }
+
+/** Shared secret between the web app and the Telegram bot process (≥ 32 chars). Unset = bot API off. */
+export function botSecret(): string | null {
+  const s = process.env.NUTIVO_BOT_SECRET ?? "";
+  return s.length >= 32 ? s : null;
+}
