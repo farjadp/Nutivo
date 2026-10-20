@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toLatinDigits, toPersianDigits } from "@nutivo/core";
 import { faInt } from "@/shared/lib/format";
 import { FoodIconTile } from "@/shared/ui/food-icon";
+import { nutiSay } from "@/features/mascot/model/lines";
+import { Nuti } from "@/features/mascot/ui/nuti";
 import type { Draft, DraftItem } from "../model/draft";
 import { draftTotals, itemMacros, regram, unitOptions } from "../model/recalc";
 
@@ -21,9 +23,10 @@ interface Props {
   error: string | null;
   onCancel: () => void;
   onConfirm: (meal_type: MealType, items: DraftItem[]) => void;
+  nuti?: boolean;
 }
 
-export function ConfirmSheet({ draft, saving, error, onCancel, onConfirm }: Props) {
+export function ConfirmSheet({ draft, saving, error, onCancel, onConfirm, nuti = false }: Props) {
   const [meal, setMeal] = useState<MealType>(draft.meal_type);
   const [items, setItems] = useState<DraftItem[]>(draft.items);
   const [focusKey, setFocusKey] = useState<string | null>(draft.items.find((i) => i.question)?.key ?? null);
@@ -96,6 +99,12 @@ export function ConfirmSheet({ draft, saving, error, onCancel, onConfirm }: Prop
             <p className="rounded-[var(--radius-btn)] bg-track px-3 py-2 text-sm text-ink-2">«{draft.raw_input}»</p>
           )}
 
+          {nuti && items.some((i) => i.question) && (
+            <div className="flex items-center gap-2 rounded-[var(--radius-btn)] bg-purple-tint px-2 py-1.5 text-[13px] font-medium text-purple-ink">
+              <Nuti mood="think" size={36} label="" />
+              {nutiSay("question").text}
+            </div>
+          )}
           <ul className="grid gap-2">
             {items.map((it) => {
               const food = it.food_id ? draft.foods[it.food_id] : undefined;

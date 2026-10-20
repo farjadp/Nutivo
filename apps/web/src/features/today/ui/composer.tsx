@@ -3,11 +3,15 @@ import { Camera, History, SendHorizontal, Sparkles } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
 import type { QuickMeal } from "@/entities/day/sample";
 import { FoodIcon } from "@/shared/ui/food-icon";
+import { nutiSay } from "@/features/mascot/model/lines";
+import { Nuti } from "@/features/mascot/ui/nuti";
 
 interface Props {
   quickMeals: QuickMeal[];
   usedQuick: Set<string>;
   busy: boolean;
+  /** Show نوتی chewing while Claude reads the meal. */
+  nuti?: boolean;
   onQuick: (q: QuickMeal) => void;
   onText: (text: string) => void;
   onPhoto: (file: File, caption: string) => void;
@@ -15,7 +19,7 @@ interface Props {
   onSampleDraft?: () => void;
 }
 
-export function Composer({ quickMeals, usedQuick, busy, onQuick, onText, onPhoto, onSampleDraft }: Props) {
+export function Composer({ quickMeals, usedQuick, busy, nuti = false, onQuick, onText, onPhoto, onSampleDraft }: Props) {
   const [text, setText] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -24,6 +28,15 @@ export function Composer({ quickMeals, usedQuick, busy, onQuick, onText, onPhoto
     if (!text.trim() || busy) return;
     onText(text.trim());
     setText("");
+  }
+
+  if (busy && nuti) {
+    return (
+      <div role="status" className="flex h-[58px] items-center gap-3 rounded-[var(--radius-card)] bg-purple-tint px-3 text-[14px] font-medium text-purple-ink">
+        <Nuti mood="chew" size={44} label="" />
+        {nutiSay("chewing", {}, Math.floor(Date.now() / 1000)).text}
+      </div>
+    );
   }
 
   if (busy) {

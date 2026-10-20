@@ -47,6 +47,8 @@ Name: Nutivo. Tagline: "Eat Smarter. Live Better." Binding brand document: Notio
 - Iranian identity shows in color, finesse and character, not historical ornament. Unverified historical claims about the purple stay out of brand copy.
 - Founder also wants animation and gamification: behaviour-based (logging streaks, "complete day", weekly badge), never calorie-shaming, one forgiven day per week. No Inter/Arial, no purple-blue gradients, no bounce easing, no nested cards (founder's global rule).
 
+- Mascot (founder, 2026-10-20): «نوتی», a mischievous, energetic little girl who says funny things; she voices Nutivo Insight. Never comments on weight/body, never guilts, numbers only from the engine, can be switched off. Full persona: docs/MASCOT.md.
+
 Implementation notes (measured 2026-10-20, to resolve in DESIGN.md):
 - #00A693 on white is 3.05:1 and on #FAF9F6 2.9:1: fine for fills, rings and large shapes, not for body text or small labels. Text in green uses #007F71 (4.91:1).
 - Protein uses the AI color in charts, which blurs "purple = Nutivo's analysis". Keep the brand's mapping but always pair the protein series with its label so color is never the only cue.

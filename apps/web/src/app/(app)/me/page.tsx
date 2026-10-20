@@ -1,6 +1,7 @@
 import { ChevronLeft, Shield, Target } from "lucide-react";
 import Link from "next/link";
 import { BottomNav } from "@/features/today/ui/bottom-nav";
+import { NutiToggle } from "@/features/mascot/ui/nuti-toggle";
 import { createClient } from "@/lib/supabase/server";
 import { isAuthDisabled, isSupabaseConfigured } from "@/shared/config";
 
@@ -30,6 +31,9 @@ export default async function MePage() {
               </span>
               <ChevronLeft size={18} strokeWidth={1.75} className="text-ink-2" aria-hidden />
             </Link>
+          </li>
+          <li className="border-t border-line">
+            <NutiToggle />
           </li>
           {showAdmin && (
             <li className="border-t border-line">

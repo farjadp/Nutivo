@@ -111,3 +111,44 @@ input { caret-color: var(--green-ink); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
 }
+
+/* ── نوتی (mascot) ───────────────────────────────────────────────────────────
+   All motion eases out or in-out with no overshoot (founder rule: no bounce). */
+.nuti .nuti-body { animation: nuti-breathe 3.2s ease-in-out infinite; transform-box: view-box; transform-origin: 60px 110px; }
+.nuti .nuti-pt-l { animation: nuti-sway 2.6s ease-in-out infinite alternate; transform-box: view-box; transform-origin: 30px 46px; }
+.nuti .nuti-pt-r { animation: nuti-sway 2.6s ease-in-out infinite alternate-reverse; transform-box: view-box; transform-origin: 90px 46px; }
+.nuti .nuti-eye { animation: nuti-blink 4.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.nuti .nuti-chew { animation: nuti-chew 0.32s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
+.nuti .nuti-z { animation: nuti-z 1.8s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+.nuti.nuti-hop { animation: nuti-hop 520ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.nuti.nuti-cheer { animation: nuti-hop 520ms cubic-bezier(0.16, 1, 0.3, 1) 2 both; }
+.nuti.nuti-tilt { animation: nuti-tilt 420ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes nuti-breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+@keyframes nuti-sway { from { transform: rotate(-7deg); } to { transform: rotate(7deg); } }
+@keyframes nuti-blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.12); } }
+@keyframes nuti-chew { from { transform: scaleY(0.35) scaleX(1.15); } to { transform: scaleY(1) scaleX(1); } }
+@keyframes nuti-z { from { transform: translate(0, 4px); opacity: 0; } 40% { opacity: 1; } to { transform: translate(4px, -6px); opacity: 0; } }
+@keyframes nuti-hop { 0% { transform: translateY(0); } 45% { transform: translateY(-12%); } 100% { transform: translateY(0); } }
+@keyframes nuti-tilt { from { transform: rotate(0); } to { transform: rotate(-7deg); } }
+
+.nuti-bit { position: absolute; top: 40%; inset-inline-start: 50%; width: 7px; height: 11px; border-radius: 2px; opacity: 0; animation: nuti-pop 1100ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.nuti-bit-alt { width: 8px; height: 8px; border-radius: 999px; }
+.nuti-bit-0 { background: var(--green); --dx: -70px; --dy: -60px; --r: -140deg; }
+.nuti-bit-1 { background: var(--purple); --dx: 64px; --dy: -70px; --r: 160deg; animation-delay: 40ms; }
+.nuti-bit-2 { background: var(--fat); --dx: -40px; --dy: -90px; --r: 90deg; animation-delay: 80ms; }
+.nuti-bit-3 { background: var(--carbs); --dx: 92px; --dy: -30px; --r: -200deg; animation-delay: 20ms; }
+.nuti-bit-4 { background: var(--green); --dx: -96px; --dy: -24px; --r: 220deg; animation-delay: 60ms; }
+.nuti-bit-5 { background: var(--purple); --dx: 30px; --dy: -100px; --r: -60deg; animation-delay: 100ms; }
+.nuti-bit-6 { background: var(--fat); --dx: -10px; --dy: -70px; --r: 300deg; animation-delay: 120ms; }
+.nuti-bit-alt.nuti-bit-0, .nuti-bit-alt.nuti-bit-3, .nuti-bit-alt.nuti-bit-5 { --dx: 50px; }
+@keyframes nuti-pop {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), calc(var(--dy) + 70px)) rotate(var(--r)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nuti .nuti-body, .nuti .nuti-pt-l, .nuti .nuti-pt-r, .nuti .nuti-eye, .nuti .nuti-chew, .nuti .nuti-z { animation: none; }
+  .nuti-bit { display: none; }
+}

@@ -15,6 +15,9 @@ import { BottomNav } from "./bottom-nav";
 import { CalorieRing } from "./calorie-ring";
 import { Composer } from "./composer";
 import { InsightCard } from "./insight-card";
+import { useNutiEnabled } from "@/features/mascot/model/enabled";
+import { daySeed, nutiSay, type NutiSituation } from "@/features/mascot/model/lines";
+import { NutiCard } from "@/features/mascot/ui/nuti-card";
 import { MacroBars } from "./macro-bars";
 import { MealList } from "./meal-list";
 import { StreakCard } from "./streak-card";
@@ -29,7 +32,16 @@ interface Props {
   quickMeals?: QuickMeal[];
 }
 
-function insightFor(remainingKcal: number, remainingProtein: number, proteinPct: number) {
+/** Protein ideas with numbers from the seed foods (packages/db). Skips anything already eaten today. */
+const PROTEIN_IDEAS = [
+  { id: "fa:jujeh-kabab", text: "یک سیخ جوجه‌کباب حدود ۳۶ گرم پروتئین و ۲۲۰ کالری دارد." },
+  { id: "fa:tokhm-morgh", text: "دو تخم‌مرغ حدود ۱۳ گرم پروتئین و ۱۴۰ کالری دارد." },
+  { id: "fa:mast", text: "یک کاسه ماست حدود ۵ گرم پروتئین و ۹۰ کالری دارد." },
+  { id: "fa:morgh-grill-sineh", text: "یک تکه سینه مرغ گریل حدود ۳۷ گرم پروتئین و ۲۰۰ کالری دارد." },
+  { id: "fa:adasi", text: "یک کاسه عدسی حدود ۱۵ گرم پروتئین و ۲۶۰ کالری دارد." },
+];
+
+function insightFor(remainingKcal: number, remainingProtein: number, proteinPct: number, eaten: Set<string> = new Set()) {
   if (remainingKcal < 0) {
     return {
       text: `امروز حدود ${faInt(-remainingKcal)} کالری بیشتر از هدف دریافت کرده‌ای.`,
@@ -39,7 +51,7 @@ function insightFor(remainingKcal: number, remainingProtein: number, proteinPct:
   if (remainingProtein > 20 && proteinPct < 0.75) {
     return {
       text: `تا اینجا ${faInt(proteinPct * 100)}٪ پروتئین روز را گرفته‌ای و ${faInt(remainingProtein)} گرم دیگر تا هدف مانده.`,
-      hint: `${faInt(remainingKcal)} کالری جا داری. یک سیخ جوجه‌کباب حدود ۴۵ گرم پروتئین و ۲۷۰ کالری دارد.`,
+      hint: `${faInt(remainingKcal)} کالری جا داری. ${(PROTEIN_IDEAS.find((p) => !eaten.has(p.id)) ?? PROTEIN_IDEAS[1]!).text}`,
     };
   }
   return {
@@ -78,6 +90,15 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
   const [fresh, setFresh] = useState<Set<string>>(new Set());
   const [pulse, setPulse] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
+  const [nutiOn] = useNutiEnabled();
+  const [lastEvent, setLastEvent] = useState<{ kind: "logged" | "photo"; n: number } | null>(null);
+  const [celebrate, setCelebrate] = useState(false);
+
+  useEffect(() => {
+    if (!lastEvent) return;
+    const t = window.setTimeout(() => setLastEvent(null), 7000);
+    return () => window.clearTimeout(t);
+  }, [lastEvent]);
 
   useEffect(() => {
     if (!notice) return;
@@ -95,7 +116,41 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
   const insight =
     items.length === 0
       ? { text: "امروز هنوز چیزی ثبت نشده.", hint: "اولین وعده را بنویس، مثلاً «دو کفگیر برنج و یه تیکه مرغ»، یا از غذایت عکس بگیر." }
-      : insightFor(totals.remaining.kcal, totals.remaining.protein_g, totals.pct.protein);
+      : insightFor(totals.remaining.kcal, totals.remaining.protein_g, totals.pct.protein, new Set(items.map((i) => i.food.id)));
+
+  useEffect(() => {
+    if (!complete.done) return;
+    try {
+      const key = "nutivo.nuti.cheered";
+      if (window.localStorage.getItem(key) === today) return;
+      window.localStorage.setItem(key, today);
+    } catch {
+      // storage blocked: still celebrate this session
+    }
+    setCelebrate(true);
+    const t = window.setTimeout(() => setCelebrate(false), 4000);
+    return () => window.clearTimeout(t);
+  }, [complete.done, today]);
+
+  const nuti = (() => {
+    const hour = new Date().getHours();
+    let sit: NutiSituation;
+    const vars: Record<string, string> = {
+      protein: faInt(Math.max(0, totals.remaining.protein_g)),
+      kcal: faInt(Math.max(0, totals.remaining.kcal)),
+      over: faInt(Math.max(0, -totals.remaining.kcal)),
+      streak: faInt(streak.current),
+    };
+    if (celebrate) sit = "complete";
+    else if (lastEvent) sit = lastEvent.kind;
+    else if (complete.done) sit = "complete";
+    else if (items.length === 0) sit = hour >= 22 ? "night" : "empty";
+    else if (totals.remaining.kcal < 0) sit = "over";
+    else if (totals.pct.protein < 0.75 && totals.remaining.protein_g > 20) sit = "proteinLow";
+    else if (streak.current >= 3 && daySeed(today) % 3 === 0) sit = "streak";
+    else sit = "onTrack";
+    return nutiSay(sit, vars, daySeed(today, lastEvent?.n ?? items.length));
+  })();
 
   function addQuick(q: QuickMeal) {
     const added = q.build();
@@ -107,6 +162,7 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
     setFresh(new Set(added.map((a) => a.key)));
     setUsedQuick((prev) => new Set(prev).add(q.id));
     setPulse((p) => p + 1);
+    setLastEvent({ kind: "logged", n: Date.now() });
     setNotice(`${q.label} ثبت شد.`);
   }
 
@@ -116,6 +172,7 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
     if (initialItems.length > prevCount) {
       setFresh(new Set(initialItems.slice(prevCount).map((i) => i.key)));
       setPulse((p) => p + 1);
+      setLastEvent({ kind: initialItems.slice(prevCount).some((i) => i.from_photo) ? "photo" : "logged", n: Date.now() });
     }
   }
 
@@ -186,6 +243,7 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
     saveLocalDay(today, next);
     setFresh(new Set(added.map((a) => a.key)));
     setPulse((p) => p + 1);
+    setLastEvent({ kind: list.some((i) => i.from_photo) ? "photo" : "logged", n: Date.now() });
     setNotice("ثبت شد.");
     closeDraft();
   }
@@ -287,13 +345,17 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
         </section>
 
         <div className="mt-4 grid gap-4">
-          <InsightCard text={insight.text} hint={insight.hint} />
+          {nutiOn ? (
+            <NutiCard mood={nuti.mood} text={nuti.text} hint={items.length ? insight.hint : undefined} hopKey={pulse} celebrate={celebrate} />
+          ) : (
+            <InsightCard text={insight.text} hint={insight.hint} />
+          )}
           <StreakCard today={today} logDates={logDates} current={streak.current} loggedToday={loggedToday} complete={complete} />
           <MealList groups={groups} freshKeys={fresh} onAdd={addToMeal} />
         </div>
       </main>
 
-      {draft && <ConfirmSheet draft={draft} saving={saving} error={saveError} onCancel={cancelDraft} onConfirm={confirmDraft} />}
+      {draft && <ConfirmSheet draft={draft} saving={saving} error={saveError} onCancel={cancelDraft} onConfirm={confirmDraft} nuti={nutiOn} />}
 
       <div className="fixed inset-x-0 bottom-0 z-10">
         <div className="mx-auto max-w-md border-t border-line/60 bg-ground/95 px-4 pt-2.5 pb-3 backdrop-blur-sm sm:rounded-t-[var(--radius-card)] sm:border-x">
@@ -307,6 +369,7 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
             onSampleDraft={isLocal ? openSampleDraft : undefined}
             usedQuick={usedQuick}
             busy={busy}
+            nuti={nutiOn}
             onQuick={addQuick}
             onText={onText}
             onPhoto={(f, c) => void onPhoto(f, c)}
