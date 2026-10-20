@@ -1,6 +1,7 @@
 "use client";
 import type { Goals } from "@nutivo/core";
-import type { LoggedItem } from "@/entities/day/sample";
+import { SAMPLE_GOALS, samplePastDays, sampleTodayItems, type LoggedItem } from "@/entities/day/sample";
+import { addDays } from "@/shared/lib/format";
 
 /**
  * Browser-only storage for review mode (no login). Not shared across devices.
@@ -10,6 +11,8 @@ const KEY = "nutivo.local.v1";
 
 interface Store {
   v: 1;
+  /** Set once the sample week has been loaded, so it is not re-added after the user clears it. */
+  seeded?: boolean;
   goals?: Goals;
   days: Record<string, LoggedItem[]>;
 }
@@ -60,4 +63,13 @@ export function clearLocalDay(today: string) {
 /** Today's date in the browser's timezone. */
 export function browserToday(): string {
   return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+
+/** Writes a sample week (goals, 8 past days with one gap, today). Replaces whatever was stored. */
+export function seedLocalSample(today: string) {
+  write({ v: 1, seeded: true, goals: SAMPLE_GOALS, days: { ...samplePastDays(today, addDays), [today]: sampleTodayItems() } });
+}
+
+export function isLocalSeeded(): boolean {
+  return read().seeded === true;
 }

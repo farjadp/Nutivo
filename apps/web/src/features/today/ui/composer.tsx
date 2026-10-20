@@ -10,9 +10,11 @@ interface Props {
   onQuick: (q: QuickMeal) => void;
   onText: (text: string) => void;
   onPhoto: (file: File, caption: string) => void;
+  /** Review mode: open the confirm sheet with a sample meal (no Claude call). */
+  onSampleDraft?: () => void;
 }
 
-export function Composer({ quickMeals, usedQuick, busy, onQuick, onText, onPhoto }: Props) {
+export function Composer({ quickMeals, usedQuick, busy, onQuick, onText, onPhoto, onSampleDraft }: Props) {
   const [text, setText] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -34,7 +36,7 @@ export function Composer({ quickMeals, usedQuick, busy, onQuick, onText, onPhoto
 
   return (
     <div className="grid gap-2">
-      {quickMeals.length > 0 && (
+      {(quickMeals.length > 0 || onSampleDraft) && (
         <div className="flex items-center gap-2 overflow-x-auto pb-0.5" role="group" aria-label="تکراری‌ها">
           <History size={16} strokeWidth={2} className="shrink-0 text-ink-2" aria-hidden />
           {quickMeals.map((q) => (
@@ -48,6 +50,15 @@ export function Composer({ quickMeals, usedQuick, busy, onQuick, onText, onPhoto
               {q.label}
             </button>
           ))}
+          {onSampleDraft && (
+            <button
+              type="button"
+              onClick={onSampleDraft}
+              className="shrink-0 rounded-full border border-dashed border-purple/50 bg-purple-tint px-3 py-1.5 text-[13px] font-medium text-purple-ink"
+            >
+              نمونه تأیید
+            </button>
+          )}
         </div>
       )}
       <form onSubmit={submit} className="flex items-center gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-1.5 shadow-[var(--shadow-soft)] focus-within:border-green">

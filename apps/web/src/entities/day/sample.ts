@@ -91,3 +91,33 @@ export const SAMPLE_QUICK_MEALS: QuickMeal[] = [
     build: () => [item("snack", F.mast, 1, "کاسه", 150), item("snack", F.khiar, 1, "عدد", 120)],
   },
 ];
+
+/** Fresh copy of today's sample items (new keys each call). */
+export function sampleTodayItems(): LoggedItem[] {
+  return [
+    item("breakfast", F.sangak, 1, "برش", 60),
+    item("breakfast", F.panir, 30, "گرم", 30),
+    item("breakfast", F.gerdu, 3, "عدد", 20),
+    item("breakfast", F.egg, 2, "عدد", 100),
+    item("lunch", F.chelo, 2, "کفگیر", 200),
+    item("lunch", F.chicken, 1, "تکه", 120),
+    item("lunch", F.shirazi, 1, "کاسه", 150, { from_photo: true }),
+    item("snack", F.khorma, 2, "عدد", 48),
+  ];
+}
+
+/** Eight past days of sample history. One day (4 days ago) is missing so the weekly grace day shows. */
+export function samplePastDays(today: string, addDays: (d: string, n: number) => string): Record<string, LoggedItem[]> {
+  const days: Record<string, LoggedItem[]> = {};
+  const menus: (() => LoggedItem[])[] = [
+    () => [item("breakfast", F.egg, 2, "عدد", 100), item("lunch", F.chelo, 2, "کفگیر", 200), item("lunch", F.jujeh, 1, "سیخ", 120), item("dinner", F.mast, 1, "کاسه", 150)],
+    () => [item("breakfast", F.sangak, 1, "برش", 60), item("breakfast", F.panir, 30, "گرم", 30), item("lunch", F.chelo, 3, "کفگیر", 300), item("lunch", F.chicken, 1, "تکه", 150)],
+    () => [item("lunch", F.chelo, 2, "کفگیر", 200), item("lunch", F.shirazi, 1, "کاسه", 150), item("dinner", F.jujeh, 1, "سیخ", 120)],
+  ];
+  for (let n = 8; n >= 1; n--) {
+    if (n === 4) continue;
+    const d = addDays(today, -n);
+    days[d] = menus[n % menus.length]!();
+  }
+  return days;
+}

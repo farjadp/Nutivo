@@ -102,7 +102,7 @@ export function OnboardingForm({ local = false }: { local?: boolean }) {
               </div>
             ))}
           </dl>
-          <p className="mt-3 text-xs leading-6 text-ink-2">بر پایه فرمول Mifflin-St Jeor. این یک نقطه شروع است، نه توصیه پزشکی؛ بعداً از صفحه «من» قابل تغییر است.</p>
+          <p className="mt-3 text-xs leading-6 text-ink-2">بر پایه فرمول <bdi dir="ltr">Mifflin-St Jeor</bdi>. این یک نقطه شروع است، نه توصیه پزشکی؛ بعداً از صفحه «من» قابل تغییر است.</p>
         </section>
       )}
 

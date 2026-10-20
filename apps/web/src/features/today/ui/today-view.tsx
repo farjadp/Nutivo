@@ -7,7 +7,8 @@ import type { Draft, DraftItem } from "@/features/log-meal/model/draft";
 import { localISO, preparePhoto } from "@/features/log-meal/model/photo";
 import { ConfirmSheet } from "@/features/log-meal/ui/confirm-sheet";
 import { SAMPLE_QUICK_MEALS, type LoggedItem, type QuickMeal } from "@/entities/day/sample";
-import { browserToday, clearLocalDay, loadLocalDay, saveLocalDay } from "@/features/local-store/day-store";
+import { sampleDraft } from "@/entities/day/sample-draft";
+import { browserToday, clearLocalDay, isLocalSeeded, loadLocalDay, saveLocalDay, seedLocalSample } from "@/features/local-store/day-store";
 import { faDayLabel, faInt } from "@/shared/lib/format";
 import { completeDay, estimatedMacros, groupMeals } from "../model/day";
 import { BottomNav } from "./bottom-nav";
@@ -61,6 +62,7 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
   useEffect(() => {
     if (!isLocal) return;
     const t = browserToday();
+    if (!isLocalSeeded()) seedLocalSample(t);
     const d = loadLocalDay(t);
     setToday(t);
     setItems(d.items);
@@ -97,7 +99,11 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
 
   function addQuick(q: QuickMeal) {
     const added = q.build();
-    setItems((prev) => [...prev, ...added]);
+    setItems((prev) => {
+      const next = [...prev, ...added];
+      if (isLocal) saveLocalDay(today, next);
+      return next;
+    });
     setFresh(new Set(added.map((a) => a.key)));
     setUsedQuick((prev) => new Set(prev).add(q.id));
     setPulse((p) => p + 1);
@@ -184,6 +190,22 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
     closeDraft();
   }
 
+  function reloadSample() {
+    seedLocalSample(today);
+    const d = loadLocalDay(today);
+    setItems(d.items);
+    setPast(d.pastLogDates);
+    if (d.goals) setGoals(d.goals);
+    setUsedQuick(new Set());
+    setPulse((p) => p + 1);
+    setNotice("داده نمونه بارگذاری شد.");
+  }
+
+  function openSampleDraft() {
+    setSaveError(null);
+    setDraft(sampleDraft(localISO()));
+  }
+
   function resetLocal() {
     clearLocalDay(today);
     setItems([]);
@@ -222,7 +244,7 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
 
   function addToMeal(m: MealType) {
     const q = quickMeals.find((x) => x.meal_type === m && !usedQuick.has(x.id));
-    if (q && isSample) addQuick(q);
+    if (q && (isSample || isLocal)) addQuick(q);
     else {
       setNotice("بنویس چی خوردی یا عکس بگیر.");
       document.getElementById("log-text")?.focus();
@@ -243,6 +265,7 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
           {isLocal && (
             <div className="flex items-center gap-2">
               <span className="rounded-full border border-dashed border-line px-2.5 py-1 text-[11px] text-ink-2" title="بدون ورود؛ داده فقط در همین مرورگر ذخیره می‌شود">حالت بررسی</span>
+              <button type="button" onClick={reloadSample} className="rounded-full px-2 py-1 text-[11px] text-green-ink hover:bg-mint">نمونه</button>
               {items.length > 0 && (
                 <button type="button" onClick={resetLocal} className="rounded-full px-2 py-1 text-[11px] text-ink-2 hover:bg-track">پاک کردن امروز</button>
               )}
@@ -280,7 +303,8 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
             </p>
           )}
           <Composer
-            quickMeals={isSample ? quickMeals : []}
+            quickMeals={isSample || isLocal ? quickMeals : []}
+            onSampleDraft={isLocal ? openSampleDraft : undefined}
             usedQuick={usedQuick}
             busy={busy}
             onQuick={addQuick}
