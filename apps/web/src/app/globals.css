@@ -105,6 +105,7 @@ body { font-family: var(--font-fa), var(--font-en), system-ui, sans-serif; }
 ::selection { background: color-mix(in srgb, var(--green) 28%, transparent); color: var(--ink); }
 :focus-visible { outline: 2px solid var(--green-ink); outline-offset: 2px; border-radius: 6px; }
 input { caret-color: var(--green-ink); }
+[dir="ltr"] { font-family: var(--font-en), system-ui, sans-serif; }
 .tabular { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1, "ss01" 1; }
 
 @media (prefers-reduced-motion: reduce) {

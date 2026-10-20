@@ -1,5 +1,5 @@
 "use client";
-import { dayTotals, streakStatus, type MealType } from "@nutivo/core";
+import { dayTotals, macrosForGrams, streakStatus, type Goals, type MealType } from "@nutivo/core";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { confirmMealAction, discardDraftPhotoAction, draftMealAction } from "@/features/log-meal/api/actions";
@@ -7,6 +7,7 @@ import type { Draft, DraftItem } from "@/features/log-meal/model/draft";
 import { localISO, preparePhoto } from "@/features/log-meal/model/photo";
 import { ConfirmSheet } from "@/features/log-meal/ui/confirm-sheet";
 import { SAMPLE_QUICK_MEALS, type LoggedItem, type QuickMeal } from "@/entities/day/sample";
+import { browserToday, clearLocalDay, loadLocalDay, saveLocalDay } from "@/features/local-store/day-store";
 import { faDayLabel, faInt } from "@/shared/lib/format";
 import { completeDay, estimatedMacros, groupMeals } from "../model/day";
 import { BottomNav } from "./bottom-nav";
@@ -22,7 +23,8 @@ interface Props {
   initialItems: LoggedItem[];
   goals: { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
   pastLogDates: string[];
-  isSample: boolean;
+  /** sample: demo data · live: Supabase + login · local: no login, saved in this browser */
+  mode: "sample" | "live" | "local";
   quickMeals?: QuickMeal[];
 }
 
@@ -45,10 +47,26 @@ function insightFor(remainingKcal: number, remainingProtein: number, proteinPct:
   };
 }
 
-export function TodayView({ today, initialItems, goals, pastLogDates, isSample, quickMeals = SAMPLE_QUICK_MEALS }: Props) {
+export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pastLogDates: pastProp, mode, quickMeals = SAMPLE_QUICK_MEALS }: Props) {
+  const isSample = mode === "sample";
+  const isLocal = mode === "local";
   const router = useRouter();
   const [localItems, setItems] = useState(initialItems);
-  const items = isSample ? localItems : initialItems;
+  const items = mode === "live" ? initialItems : localItems;
+  const [today, setToday] = useState(todayProp);
+  const [goals, setGoals] = useState<Goals>(goalsProp);
+  const [pastLogDates, setPast] = useState(pastProp);
+
+  // Local review mode: read the day and goals stored in this browser.
+  useEffect(() => {
+    if (!isLocal) return;
+    const t = browserToday();
+    const d = loadLocalDay(t);
+    setToday(t);
+    setItems(d.items);
+    setPast(d.pastLogDates);
+    if (d.goals) setGoals(d.goals);
+  }, [isLocal]);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
   const [saving, startSaving] = useTransition();
@@ -72,7 +90,10 @@ export function TodayView({ today, initialItems, goals, pastLogDates, isSample, 
   const loggedToday = items.length > 0;
   const logDates = useMemo(() => (loggedToday ? [...pastLogDates, today] : pastLogDates), [pastLogDates, today, loggedToday]);
   const streak = useMemo(() => streakStatus({ logDates, today, graceDaysPerWeek: 1 }), [logDates, today]);
-  const insight = insightFor(totals.remaining.kcal, totals.remaining.protein_g, totals.pct.protein);
+  const insight =
+    items.length === 0
+      ? { text: "امروز هنوز چیزی ثبت نشده.", hint: "اولین وعده را بنویس، مثلاً «دو کفگیر برنج و یه تیکه مرغ»، یا از غذایت عکس بگیر." }
+      : insightFor(totals.remaining.kcal, totals.remaining.protein_g, totals.pct.protein);
 
   function addQuick(q: QuickMeal) {
     const added = q.build();
@@ -84,7 +105,7 @@ export function TodayView({ today, initialItems, goals, pastLogDates, isSample, 
   }
 
   // Live mode: replay the glow when the server sends back more items after a save.
-  if (!isSample && initialItems.length !== prevCount) {
+  if (mode === "live" && initialItems.length !== prevCount) {
     setPrevCount(initialItems.length);
     if (initialItems.length > prevCount) {
       setFresh(new Set(initialItems.slice(prevCount).map((i) => i.key)));
@@ -99,11 +120,13 @@ export function TodayView({ today, initialItems, goals, pastLogDates, isSample, 
     }
     setBusy(true);
     form.set("now", localISO());
+    const photo = form.get("photo");
     const res = await draftMealAction(form);
     setBusy(false);
     if (res.ok) {
       setSaveError(null);
-      setDraft(res.data);
+      const preview = !res.data.photo_preview_url && photo instanceof File ? URL.createObjectURL(photo) : res.data.photo_preview_url;
+      setDraft({ ...res.data, photo_preview_url: preview });
     } else setNotice(res.error);
   }
 
@@ -120,13 +143,56 @@ export function TodayView({ today, initialItems, goals, pastLogDates, isSample, 
     void requestDraft(f);
   }
 
+  function closeDraft() {
+    if (draft?.photo_preview_url?.startsWith("blob:")) URL.revokeObjectURL(draft.photo_preview_url);
+    setDraft(null);
+  }
+
   function cancelDraft() {
     if (draft?.photo_path) void discardDraftPhotoAction(draft.photo_path);
-    setDraft(null);
+    closeDraft();
+  }
+
+  function confirmLocal(meal_type: MealType, list: DraftItem[]) {
+    if (!draft) return;
+    const stamp = Date.now().toString(36);
+    const added: LoggedItem[] = list.map((i, n) => {
+      const food = draft.foods[i.food_id!]!;
+      return {
+        key: `l-${stamp}-${n}`,
+        meal_type,
+        name_raw: i.name_raw,
+        qty: i.qty,
+        unit: i.unit,
+        prep_hint: i.prep_hint,
+        confidence: i.confidence,
+        needs_question: undefined,
+        from_photo: i.from_photo,
+        food,
+        grams: i.grams!,
+        macros: macrosForGrams(food, i.grams!),
+        is_estimated: i.is_estimated,
+        resolution: i.is_estimated ? "estimated_range" : "default_unit",
+      };
+    });
+    const next = [...localItems, ...added];
+    setItems(next);
+    saveLocalDay(today, next);
+    setFresh(new Set(added.map((a) => a.key)));
+    setPulse((p) => p + 1);
+    setNotice("ثبت شد.");
+    closeDraft();
+  }
+
+  function resetLocal() {
+    clearLocalDay(today);
+    setItems([]);
+    setNotice("داده‌های امروز پاک شد.");
   }
 
   function confirmDraft(meal_type: MealType, list: DraftItem[]) {
     if (!draft) return;
+    if (isLocal) return confirmLocal(meal_type, list);
     startSaving(async () => {
       const res = await confirmMealAction({
         meal_type,
@@ -148,7 +214,7 @@ export function TodayView({ today, initialItems, goals, pastLogDates, isSample, 
         setSaveError(res.error);
         return;
       }
-      setDraft(null);
+      closeDraft();
       setNotice("ثبت شد.");
       router.refresh();
     });
@@ -173,6 +239,14 @@ export function TodayView({ today, initialItems, goals, pastLogDates, isSample, 
           </div>
           {isSample && (
             <span className="rounded-full border border-dashed border-line px-2.5 py-1 text-[11px] text-ink-2">داده نمونه</span>
+          )}
+          {isLocal && (
+            <div className="flex items-center gap-2">
+              <span className="rounded-full border border-dashed border-line px-2.5 py-1 text-[11px] text-ink-2" title="بدون ورود؛ داده فقط در همین مرورگر ذخیره می‌شود">حالت بررسی</span>
+              {items.length > 0 && (
+                <button type="button" onClick={resetLocal} className="rounded-full px-2 py-1 text-[11px] text-ink-2 hover:bg-track">پاک کردن امروز</button>
+              )}
+            </div>
           )}
         </header>
 

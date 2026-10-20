@@ -1,6 +1,8 @@
 "use client";
 import { suggestGoals } from "@nutivo/core";
+import { useRouter } from "next/navigation";
 import { useActionState, useMemo, useState } from "react";
+import { saveLocalGoals } from "@/features/local-store/day-store";
 import { faInt } from "@/shared/lib/format";
 import { saveProfileAction, type OnboardingState } from "./actions";
 
@@ -46,7 +48,8 @@ function NumField({ id, label, unit, value, onChange, min, max }: { id: string; 
   );
 }
 
-export function OnboardingForm() {
+export function OnboardingForm({ local = false }: { local?: boolean }) {
+  const router = useRouter();
   const [state, action, pending] = useActionState<OnboardingState, FormData>(saveProfileAction, {});
   const [sex, setSex] = useState<Sex>("male");
   const [age, setAge] = useState("35");
@@ -63,7 +66,16 @@ export function OnboardingForm() {
   }, [sex, age, height, weight, activity, goal]);
 
   return (
-    <form action={action} className="grid gap-5">
+    <form
+      action={action}
+      onSubmit={(e) => {
+        if (!local || !goals) return;
+        e.preventDefault();
+        saveLocalGoals(goals);
+        router.push("/today");
+      }}
+      className="grid gap-5"
+    >
       <input type="hidden" name="timezone" value={tz} />
       <div className="grid gap-2"><span className="text-sm font-semibold">جنسیت</span><Chips name="sex" value={sex} onChange={setSex} options={[{ v: "male", l: "مرد" }, { v: "female", l: "زن" }]} /></div>
       <div className="grid grid-cols-3 gap-3">

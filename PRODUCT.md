@@ -40,7 +40,7 @@ Name: Nutivo. Tagline: "Eat Smarter. Live Better." Binding brand document: Notio
 - Rule: green = what the user does; purple = what Nutivo analyses. Purple never competes with green for attention.
 - Semantic: success #16803C, warning #D97706, error #DC2626 (real errors only), info #2563EB. Going over calories is a soft warning with an explanation, never red.
 - Chart colors: calories #00A693, protein #66023C, carbs #2563EB, fat #D97706; target always visible; estimated values visually distinct from confirmed.
-- Type: Vazirmatn (Persian), Plus Jakarta Sans (English); tabular figures for nutrition numbers. Scale: display 32–40 bold, page 24 bold, section 20 semibold, card 16 semibold, body 14–16, caption 12–13.
+- Type: IRANYekanX variable with Persian numerals (Persian; founder's licensed Fontiran font, chosen 2026-10-20 from the founder's font folder), Plus Jakarta Sans (English); tabular figures for nutrition numbers. Scale: display 32–40 bold, page 24 bold, section 20 semibold, card 16 semibold, body 14–16, caption 12–13.
 - UI: minimal, calm, data-driven. Card radius 16, button radius 12, 8px grid, very soft shadows, no heavy shadows, no stacked gradients, no decorative glass. Icons: Lucide, outline/rounded, 1.75–2px stroke.
 - Logo: abstract geometric symbol + wordmark (balance + intelligence); no apple, fork, plate, or digital brain.
 - Voice: scientific but simple, supportive not judgmental, actionable, honest about accuracy.

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { foodFromRow } from "@/entities/food/map";
 import { createClient } from "@/lib/supabase/server";
-import { isAiConfigured, isSupabaseConfigured, PHOTO_MAX_BYTES, PHOTO_TYPES } from "@/shared/config";
+import { isAiConfigured, isAuthDisabled, isSupabaseConfigured, PHOTO_MAX_BYTES, PHOTO_TYPES } from "@/shared/config";
 import type { ActionResult, Draft } from "../model/draft";
 import { ExtractError, extractMeal } from "./extract.server";
 import { resolveMeal } from "./resolve.server";
@@ -20,9 +20,11 @@ async function requireUser() {
 
 /** Text or photo → draft items for the confirm screen. Nothing is saved except the photo. */
 export async function draftMealAction(form: FormData): Promise<ActionResult<Draft>> {
-  if (!isSupabaseConfigured() || !isAiConfigured()) return { ok: false, error: NOT_READY };
+  if (!isSupabaseConfigured()) return { ok: false, error: NOT_READY };
+  if (!isAiConfigured()) return { ok: false, error: "کلید Claude تنظیم نشده (ANTHROPIC_API_KEY در apps/web/.env.local)." };
+  const local = isAuthDisabled();
   const { supabase, user } = await requireUser();
-  if (!user) return { ok: false, error: "برای ثبت باید وارد حساب شوی." };
+  if (!user && !local) return { ok: false, error: "برای ثبت باید وارد حساب شوی." };
 
   const text = String(form.get("text") ?? "").slice(0, 600);
   const nowISO = String(form.get("now") ?? new Date().toISOString());
@@ -38,9 +40,13 @@ export async function draftMealAction(form: FormData): Promise<ActionResult<Draf
       if (!(PHOTO_TYPES as readonly string[]).includes(photo.type)) return { ok: false, error: "فقط عکس JPG، PNG یا WebP." };
       const bytes = Buffer.from(await photo.arrayBuffer());
       image = { base64: bytes.toString("base64"), mediaType: photo.type as (typeof PHOTO_TYPES)[number] };
-      const ext = photo.type.split("/")[1];
+    }
+    if (image && user) {
+      const photoFile = photo as File;
+      const bytes = Buffer.from(image.base64, "base64");
+      const ext = photoFile.type.split("/")[1];
       photo_path = `${user.id}/${nowISO.slice(0, 10)}/${crypto.randomUUID()}.${ext}`;
-      const up = await supabase.storage.from("meal-photos").upload(photo_path, bytes, { contentType: photo.type, upsert: false });
+      const up = await supabase.storage.from("meal-photos").upload(photo_path, bytes, { contentType: photoFile.type, upsert: false });
       if (up.error) return { ok: false, error: "آپلود عکس انجام نشد. دوباره امتحان کن." };
       const signed = await supabase.storage.from("meal-photos").createSignedUrl(photo_path, 60 * 30);
       photo_preview_url = signed.data?.signedUrl ?? null;

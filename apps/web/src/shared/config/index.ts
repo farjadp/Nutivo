@@ -9,3 +9,11 @@ export function isAiConfigured(): boolean {
 
 export const PHOTO_MAX_BYTES = 8 * 1024 * 1024;
 export const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+
+/**
+ * Review mode without login (development only). Meals and goals live in the browser;
+ * Claude extraction and the food database stay real. Never active in production builds.
+ */
+export function isAuthDisabled(): boolean {
+  return process.env.NUTIVO_AUTH_DISABLED === "true" && process.env.NODE_ENV !== "production";
+}
