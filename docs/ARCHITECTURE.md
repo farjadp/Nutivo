@@ -1,0 +1,23 @@
+# Nutivo — معماری (خلاصه فنی)
+
+## اصل
+```
+input (text | photo | quick) → Claude extract_meal (JSON) → resolve (foods_fa → USDA → OFF)
+→ ask ≤1 question → core.calc → user confirms → Supabase → dashboard / nightly report
+```
+مدل زبانی هیچ عدد تغذیه‌ای تولید نمی‌کند. اعداد از `foods` + `portion_units` و موتور `@nutivo/core` می‌آیند و روی `entry_items` فریز می‌شوند.
+
+## پکیج‌ها
+- `packages/core`: اسکیماها (zod)، واحدها، محاسبه، اهداف، گزارش، پرامپت‌ها. بدون وابستگی به Next یا Supabase.
+- `packages/db`: مهاجرت‌های Supabase، CSV غذاهای ایرانی، اعتبارسنج seed.
+- `apps/web`: Next.js 15، RTL، Vazirmatn. Server Actions برای ثبت؛ Route Handler برای cron گزارش شبانه.
+- `apps/bot` (فاز ۲)، `apps/mobile` (فاز ۳): فقط رابط روی همان core و همان جدول‌ها.
+
+## جریان عکس
+۱) آپلود به Supabase Storage (bucket خصوصی `meal-photos`) ۲) Claude vision با همان tool `extract_meal`، `from_photo=true` ۳) هر آیتم `is_estimated=true` ۴) صفحه تأیید همان صفحه متن است.
+
+## گزارش شبانه
+Route Handler `/api/cron/nightly` (Vercel Cron، هر ساعت) → برای کاربرانی که ساعت محلی‌شان `NUTIVO_REPORT_HOUR_LOCAL` است، `core.buildDailyReport` → متن تحلیل با Claude (ورودی: فقط اعداد محاسبه‌شده) → `daily_reports`.
+
+## محیط
+`apps/web/.env.example` را کپی کن. کلیدها هرگز در کد نیستند.

@@ -1,0 +1,10 @@
+node_modules
+.next
+dist
+.env
+.env.*
+!.env.example
+.DS_Store
+.impeccable/config.local.json
+.impeccable/mocks
+.impeccable/questions
