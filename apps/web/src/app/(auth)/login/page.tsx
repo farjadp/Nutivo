@@ -1,8 +1,11 @@
+import { redirect } from "next/navigation";
 import { LoginForm } from "@/features/auth/login-form";
+import { isAuthDisabled } from "@/shared/config";
 
 export const metadata = { title: "ورود · Nutivo" };
 
 export default function LoginPage() {
+  if (isAuthDisabled()) redirect("/today");
   return (
     <main className="mx-auto grid min-h-dvh max-w-sm content-center gap-8 px-4 py-10">
       <header className="grid gap-2">
