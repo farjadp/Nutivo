@@ -1,0 +1,63 @@
+import { Camera, Plus } from "lucide-react";
+import type { MealType } from "@nutivo/core";
+import { faInt } from "@/shared/lib/format";
+import type { MealGroup } from "../model/day";
+
+const MEAL_LABEL: Record<MealType, string> = { breakfast: "صبحانه", lunch: "ناهار", snack: "میان‌وعده", dinner: "شام" };
+
+export function MealList({ groups, freshKeys, onAdd }: { groups: MealGroup[]; freshKeys: Set<string>; onAdd: (m: MealType) => void }) {
+  return (
+    <section aria-labelledby="meals-title" className="grid gap-3">
+      <h2 id="meals-title" className="text-xl font-semibold">وعده‌های امروز</h2>
+      {groups.map((g) => (
+        <article key={g.meal_type} className="rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-soft)]">
+          <header className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2">
+            <h3 className="text-base font-semibold">{MEAL_LABEL[g.meal_type]}</h3>
+            {g.items.length > 0 ? (
+              <span className="tabular text-sm text-ink-2">
+                {g.hasEstimate && "≈ "}
+                {faInt(g.macros.kcal)} کالری
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onAdd(g.meal_type)}
+                className="flex items-center gap-1 rounded-[var(--radius-btn)] px-2 py-1 text-sm font-medium text-green-ink hover:bg-mint"
+              >
+                <Plus size={16} strokeWidth={2} aria-hidden />
+                افزودن
+              </button>
+            )}
+          </header>
+          {g.items.length === 0 ? (
+            <p className="px-4 pb-4 text-sm text-ink-2">هنوز چیزی ثبت نشده.</p>
+          ) : (
+            <ul className="divide-y divide-line px-4 pb-1">
+              {g.items.map((it) => (
+                <li key={it.key} className={`flex items-center justify-between gap-3 py-2.5 ${freshKeys.has(it.key) ? "animate-rise" : ""}`}>
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-1.5 truncate text-[15px]">
+                      {it.food.name_fa}
+                      {it.from_photo && <Camera size={14} strokeWidth={2} className="shrink-0 text-ink-2" aria-label="از روی عکس" />}
+                    </p>
+                    <p className="tabular text-xs text-ink-2">
+                      {faInt(it.qty)} {it.unit !== "گرم" && it.unit}
+                      {it.unit !== "گرم" ? ` · ${it.is_estimated ? "≈ " : ""}${faInt(it.grams)} گرم` : " گرم"}
+                    </p>
+                  </div>
+                  <div className="tabular shrink-0 text-left">
+                    <p className="text-sm font-semibold">
+                      {it.is_estimated && "≈ "}
+                      {faInt(it.macros.kcal)}
+                    </p>
+                    <p className="text-[11px] text-ink-2">پ {faInt(it.macros.protein_g)}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+      ))}
+    </section>
+  );
+}

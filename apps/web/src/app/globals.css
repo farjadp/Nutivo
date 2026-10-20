@@ -1,26 +1,103 @@
 @import "tailwindcss";
 
+/*
+ * Nutivo brand tokens (PRODUCT.md → Brand Commitments, Notion brand doc v1.0).
+ * green = what the user does · purple = what Nutivo analyses · neutrals carry ~70%.
+ * Text-on-green uses --green-ink (4.9:1); #00A693 is for fills, rings, large shapes.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --ground: #faf9f6;
+  --surface: #ffffff;
+  --ink: #20252b;
+  --ink-2: #667085;
+  --line: #e5e7eb;
+  --green: #00a693;
+  --green-ink: #007f71;
+  --mint: #eaf8f5;
+  --purple: #66023c;
+  --purple-ink: #66023c;
+  --purple-tint: #f5eaf0;
+  --carbs: #2563eb;
+  --fat: #d97706;
+  --fat-ink: #a35a04;
+  --success: #16803c;
+  --error: #dc2626;
+  --track: #eef0f2;
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --ground: #101315;
+    --surface: #181c1f;
+    --ink: #eceef0;
+    --ink-2: #9aa3ae;
+    --line: #2a3136;
+    --green: #1fbfa9;
+    --green-ink: #3fd3bf;
+    --mint: #10302b;
+    --purple: #c86a9f;
+    --purple-ink: #e3a3c6;
+    --purple-tint: #2a1822;
+    --carbs: #6b9bf5;
+    --fat: #f0a43a;
+    --fat-ink: #f3b45e;
+    --success: #4cc27a;
+    --error: #f26b6b;
+    --track: #252b30;
+    color-scheme: dark;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-line: var(--line);
+  --color-green: var(--green);
+  --color-green-ink: var(--green-ink);
+  --color-mint: var(--mint);
+  --color-purple: var(--purple);
+  --color-purple-ink: var(--purple-ink);
+  --color-purple-tint: var(--purple-tint);
+  --color-carbs: var(--carbs);
+  --color-fat: var(--fat);
+  --color-fat-ink: var(--fat-ink);
+  --color-success: var(--success);
+  --color-error: var(--error);
+  --color-track: var(--track);
+  --font-sans: var(--font-fa), var(--font-en), system-ui, sans-serif;
+  --font-en: var(--font-en), var(--font-fa), system-ui, sans-serif;
+  --radius-card: 16px;
+  --radius-btn: 12px;
+  --shadow-soft: 0 1px 2px rgb(16 24 40 / 0.04), 0 4px 12px rgb(16 24 40 / 0.04);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-pop: pop 420ms var(--ease-out-expo) both;
+  --animate-rise: rise 360ms var(--ease-out-expo) both;
+  --animate-glow: glow 1200ms var(--ease-out-expo) both;
+}
+
+@keyframes pop {
+  from { transform: scale(0.4); opacity: 0.2; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes rise {
+  from { transform: translateY(6px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes glow {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 45%, transparent); }
+  100% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--green) 0%, transparent); }
+}
+
+html, body { background: var(--ground); color: var(--ink); }
+body { font-family: var(--font-fa), var(--font-en), system-ui, sans-serif; }
+::selection { background: color-mix(in srgb, var(--green) 28%, transparent); color: var(--ink); }
+:focus-visible { outline: 2px solid var(--green-ink); outline-offset: 2px; border-radius: 6px; }
+input { caret-color: var(--green-ink); }
+.tabular { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1, "ss01" 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
 }
