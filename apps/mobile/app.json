@@ -44,9 +44,28 @@
           "backgroundColor": "#007F71"
         }
       ],
-      ["expo-localization", { "supportsRTL": true, "forcesRTL": true }]
+      [
+        "expo-localization",
+        {
+          "supportsRTL": true,
+          "forcesRTL": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": false,
+          "cameraPermission": "Nutivo برای ثبت وعده از روی عکس به دوربین دسترسی می‌خواهد.",
+          "microphonePermission": false
+        }
+      ]
     ],
-    "extra": { "supportsRTL": true, "forcesRTL": true },
-    "experiments": { "typedRoutes": true }
+    "extra": {
+      "supportsRTL": true,
+      "forcesRTL": true
+    },
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

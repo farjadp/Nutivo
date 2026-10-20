@@ -1,9 +1,11 @@
 import type { DayView } from "@nutivo/core";
 import { toPersianDigits } from "@nutivo/core";
+import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { useUndo } from "@/lib/undo";
 import { Button } from "@/ui/button";
 import { Logo } from "@/ui/logo";
 import { Ring } from "@/ui/ring";
@@ -32,6 +34,7 @@ function Macro({ label, value, goal, bar, ink }: { label: string; value: number;
 
 export default function Today() {
   const { signOut, me } = useSession();
+  const { version } = useUndo();
   const [day, setDay] = useState<DayView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,9 +48,10 @@ export default function Today() {
       setError(null);
     } else setError(r.error);
   }, []);
+  // Reload on open and after every save or undo.
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, version]);
 
   return (
     <Screen refreshControl={<RefreshControl refreshing={loading} onRefresh={load} colorsClassName="accent-green" tintColorClassName="accent-green" />}>
@@ -81,6 +85,8 @@ export default function Today() {
             {day.streak > 1 && <Text className="text-xs text-green-ink">زنجیره {fa(day.streak)} روزه</Text>}
           </View>
 
+          <Button label="ثبت وعده" onPress={() => router.push("/log")} />
+
           {day.meals.length ? (
             <View className="gap-3">
               {day.meals.map((m) => (
@@ -101,12 +107,12 @@ export default function Today() {
           ) : (
             <View className="gap-1 rounded-card bg-mint p-4">
               <Text className="font-strong text-[15px] text-green-ink">امروز هنوز چیزی ثبت نشده</Text>
-              <Text className="text-sm leading-6 text-ink-2">ثبت وعده از اپ در قدم بعد اضافه می‌شود. فعلاً از وب یا بات تلگرام ثبت کن؛ اینجا همان روز را می‌بینی.</Text>
+              <Text className="text-sm leading-6 text-ink-2">بنویس چه خوردی یا از بشقابت عکس بگیر. وعده‌هایی که از وب یا تلگرام ثبت کنی هم اینجا می‌آیند.</Text>
             </View>
           )}
         </>
       )}
-      {me?.email && <Text className="text-center text-xs text-ink-2">{me.email}</Text>}
+      {me?.email && <Text className="pb-16 text-center text-xs text-ink-2">{me.email}</Text>}
     </Screen>
   );
 }

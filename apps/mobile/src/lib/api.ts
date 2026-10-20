@@ -20,6 +20,12 @@ export interface ProfileInput {
   timezone: string;
 }
 
+export type MealType = DraftView["meal_type"];
+export type DraftChange =
+  | { op: "inc" | "dec" | "remove"; idx: number }
+  | { op: "meal"; meal_type: MealType }
+  | { op: "grams"; idx: number; grams: number };
+
 /** Calls the web app's /api/app/<action> with the signed-in user's access token. */
 async function call<T>(action: string, body: object = {}): Promise<ApiResult<T>> {
   const { data } = await supabase.auth.getSession();
@@ -44,5 +50,9 @@ export const api = {
   today: (date?: string) => call<DayView>("today", { date }),
   draft: (input: { text?: string; photo?: { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" } }) =>
     call<DraftView>("draft", { ...input, now: new Date().toISOString() }),
+  draftEdit: (id: string, change: DraftChange) => call<DraftView>("draft_edit", { id, change }),
+  draftConfirm: (id: string) => call<{ entry_id: string; day: DayView | null }>("draft_confirm", { id }),
+  draftCancel: (id: string) => call<{ cancelled: true }>("draft_cancel", { id }),
+  undo: (entryId: string) => call<{ undone: true }>("undo", { entry_id: entryId }),
   report: (date?: string) => call<ReportView>("report", { date }),
 };
