@@ -73,3 +73,9 @@ export function seedLocalSample(today: string) {
 export function isLocalSeeded(): boolean {
   return read().seeded === true;
 }
+
+/** Every stored day (for the day strip) plus goals. */
+export function loadLocalAll(): { days: Record<string, LoggedItem[]>; goals?: Goals } {
+  const s = read();
+  return { days: s.days, goals: s.goals };
+}

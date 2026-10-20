@@ -10,9 +10,10 @@ import { deleteEntryItemAction, updateEntryItemAction } from "@/features/edit-me
 import { EditItemSheet, type ItemEdit } from "@/features/edit-meal/ui/edit-item-sheet";
 import { SAMPLE_QUICK_MEALS, type LoggedItem, type QuickMeal } from "@/entities/day/sample";
 import { sampleDraft } from "@/entities/day/sample-draft";
-import { browserToday, clearLocalDay, isLocalSeeded, loadLocalDay, saveLocalDay, seedLocalSample } from "@/features/local-store/day-store";
-import { faDayLabel, faInt } from "@/shared/lib/format";
-import { completeDay, estimatedMacros, groupMeals } from "../model/day";
+import { browserToday, clearLocalDay, isLocalSeeded, loadLocalAll, saveLocalDay, seedLocalSample } from "@/features/local-store/day-store";
+import { addDays, faDayLabel, faInt } from "@/shared/lib/format";
+import { completeDay, DAY_WINDOW, estimatedMacros, groupMeals, statsComplete, statsOf, type DayStats } from "../model/day";
+import { DayStrip, type DayMark } from "./day-strip";
 import { BottomNav } from "./bottom-nav";
 import { CalorieRing } from "./calorie-ring";
 import { Composer } from "./composer";
@@ -29,6 +30,9 @@ interface Props {
   initialItems: LoggedItem[];
   goals: { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
   pastLogDates: string[];
+  /** Live mode: the day being shown (YYYY-MM-DD) and per-day totals for the strip. */
+  date?: string;
+  stats?: Record<string, DayStats>;
   /** sample: demo data · live: Supabase + login · local: no login, saved in this browser */
   mode: "sample" | "live" | "local";
   quickMeals?: QuickMeal[];
@@ -62,29 +66,46 @@ function insightFor(remainingKcal: number, remainingProtein: number, proteinPct:
   };
 }
 
-export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pastLogDates: pastProp, mode, quickMeals = SAMPLE_QUICK_MEALS }: Props) {
+export function TodayView({ today: todayProp, date: dateProp, stats: statsProp, initialItems, goals: goalsProp, pastLogDates: pastProp, mode, quickMeals = SAMPLE_QUICK_MEALS }: Props) {
   const isSample = mode === "sample";
   const isLocal = mode === "local";
   const router = useRouter();
-  const [localItems, setItems] = useState(initialItems);
+  const isLive = mode === "live";
+  // Local/sample modes keep every day in memory (mirrored to localStorage in local mode).
+  const [localDays, setLocalDays] = useState<Record<string, LoggedItem[]>>({ [todayProp]: initialItems });
+  const [viewLocal, setViewLocal] = useState(todayProp);
+  const viewDate = isLive ? (dateProp ?? todayProp) : viewLocal;
+  const localItems = localDays[viewDate] ?? [];
+  /** Change one day's items; the date is explicit so delayed commits never land on another day. */
+  const updateDay = useCallback(
+    (date: string, fn: (prev: LoggedItem[]) => LoggedItem[]) =>
+      setLocalDays((prev) => {
+        const next = fn(prev[date] ?? []);
+        if (isLocal) saveLocalDay(date, next);
+        return { ...prev, [date]: next };
+      }),
+    [isLocal],
+  );
+  const [navPending, startNav] = useTransition();
+  const [slide, setSlide] = useState<"newer" | "older" | null>(null);
   // Deleted items stay hidden for a few seconds (undo window) before the delete is committed.
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [leaving, setLeaving] = useState<Set<string>>(new Set());
-  const allItems = mode === "live" ? initialItems : localItems;
+  const allItems = isLive ? initialItems : localItems;
   const items = useMemo(() => (hidden.size ? allItems.filter((i) => !hidden.has(i.key)) : allItems), [allItems, hidden]);
   const [today, setToday] = useState(todayProp);
   const [goals, setGoals] = useState<Goals>(goalsProp);
-  const [pastLogDates, setPast] = useState(pastProp);
+  const pastLogDates = pastProp;
 
   // Local review mode: read the day and goals stored in this browser.
   useEffect(() => {
     if (!isLocal) return;
     const t = browserToday();
     if (!isLocalSeeded()) seedLocalSample(t);
-    const d = loadLocalDay(t);
+    const d = loadLocalAll();
     setToday(t);
-    setItems(d.items);
-    setPast(d.pastLogDates);
+    setViewLocal(t);
+    setLocalDays(d.days);
     if (d.goals) setGoals(d.goals);
   }, [isLocal]);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -138,16 +159,66 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
   const est = useMemo(() => estimatedMacros(items), [items]);
   const groups = useMemo(() => groupMeals(items), [items]);
   const complete = useMemo(() => completeDay(items, goals), [items, goals]);
-  const loggedToday = items.length > 0;
-  const logDates = useMemo(() => (loggedToday ? [...pastLogDates, today] : pastLogDates), [pastLogDates, today, loggedToday]);
+  const isToday = viewDate === today;
+  const dayStats = useMemo(() => {
+    const base: Record<string, DayStats> = isLive ? { ...(statsProp ?? {}) } : Object.fromEntries(Object.entries(localDays).map(([d, list]) => [d, statsOf(list)]));
+    base[viewDate] = statsOf(items);
+    return base;
+  }, [isLive, statsProp, localDays, viewDate, items]);
+  const logDates = useMemo(() => {
+    const set = new Set(pastLogDates.filter((d) => d < today));
+    for (const [d, st] of Object.entries(dayStats)) {
+      if (d > today) continue;
+      if (st.meals > 0) set.add(d);
+      else set.delete(d);
+    }
+    return [...set].sort();
+  }, [pastLogDates, dayStats, today]);
+  const loggedToday = logDates.includes(today);
+  const marks = useMemo(() => {
+    const m: Record<string, DayMark> = {};
+    for (const d of logDates) m[d] = statsComplete(dayStats[d], goals) ? "complete" : "logged";
+    return m;
+  }, [logDates, dayStats, goals]);
+  const oldest = addDays(today, -(DAY_WINDOW - 1));
+
+  function goTo(d: string) {
+    if (d === viewDate || d > today || d < oldest) return;
+    setSlide(d > viewDate ? "newer" : "older");
+    setEditing(null);
+    if (isLive) startNav(() => router.push(d === today ? "/today" : `/today?d=${d}`, { scroll: false }));
+    else setViewLocal(d);
+  }
+
+  // Swipe on the summary card. RTL: newer days lie to the left, so a rightward swipe moves to the newer day.
+  const swipe = useRef<{ x: number; y: number } | null>(null);
+  function onPointerDown(e: React.PointerEvent) {
+    swipe.current = { x: e.clientX, y: e.clientY };
+  }
+  function onPointerUp(e: React.PointerEvent) {
+    const s0 = swipe.current;
+    swipe.current = null;
+    if (!s0) return;
+    const dx = e.clientX - s0.x;
+    if (Math.abs(dx) < 56 || Math.abs(e.clientY - s0.y) > Math.abs(dx)) return;
+    goTo(addDays(viewDate, dx > 0 ? 1 : -1));
+  }
   const streak = useMemo(() => streakStatus({ logDates, today, graceDaysPerWeek: 1 }), [logDates, today]);
   const insight =
     items.length === 0
       ? { text: "امروز هنوز چیزی ثبت نشده.", hint: "اولین وعده را بنویس، مثلاً «دو کفگیر برنج و یه تیکه مرغ»، یا از غذایت عکس بگیر." }
       : insightFor(totals.remaining.kcal, totals.remaining.protein_g, totals.pct.protein, new Set(items.map((i) => i.food.id)));
 
+  const dayTitle = isToday ? "امروز" : viewDate === addDays(today, -1) ? "دیروز" : faDayLabel(viewDate).split(" ")[0]!;
+  const pastSummary = items.length
+    ? {
+        text: `${dayTitle} ${faInt(totals.macros.kcal)} کالری و ${faInt(totals.macros.protein_g)} گرم پروتئین ثبت شده.`,
+        hint: complete.done ? "روز کامل بود." : "اگر چیزی جا افتاده، همین پایین بنویس تا به همین روز اضافه شود.",
+      }
+    : { text: `برای ${dayTitle} چیزی ثبت نشده.`, hint: "اگر یادت هست چه خوردی، همین پایین بنویس؛ به همین روز اضافه می‌شود." };
+
   useEffect(() => {
-    if (!complete.done) return;
+    if (!complete.done || !isToday) return;
     try {
       const key = "nutivo.nuti.cheered";
       if (window.localStorage.getItem(key) === today) return;
@@ -158,7 +229,7 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
     setCelebrate(true);
     const t = window.setTimeout(() => setCelebrate(false), 4000);
     return () => window.clearTimeout(t);
-  }, [complete.done, today]);
+  }, [complete.done, isToday, today]);
 
   const nuti = (() => {
     const hour = new Date().getHours();
@@ -182,11 +253,7 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
 
   function addQuick(q: QuickMeal) {
     const added = q.build();
-    setItems((prev) => {
-      const next = [...prev, ...added];
-      if (isLocal) saveLocalDay(today, next);
-      return next;
-    });
+    updateDay(viewDate, (prev) => [...prev, ...added]);
     setFresh(new Set(added.map((a) => a.key)));
     setUsedQuick((prev) => new Set(prev).add(q.id));
     setPulse((p) => p + 1);
@@ -194,8 +261,14 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
     setNotice(`${q.label} ثبت شد.`);
   }
 
+  // Live mode: a new day from the server is not a "new log"; reset the counter without the glow.
+  const [prevDate, setPrevDate] = useState(viewDate);
+  if (isLive && viewDate !== prevDate) {
+    setPrevDate(viewDate);
+    setPrevCount(initialItems.length);
+  }
   // Live mode: replay the glow when the server sends back more items after a save.
-  if (mode === "live" && initialItems.length !== prevCount) {
+  else if (isLive && initialItems.length !== prevCount) {
     setPrevCount(initialItems.length);
     if (initialItems.length > prevCount) {
       setFresh(new Set(initialItems.slice(prevCount).map((i) => i.key)));
@@ -210,7 +283,7 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
       return;
     }
     setBusy(true);
-    form.set("now", localISO());
+    form.set("now", nowForView());
     const photo = form.get("photo");
     const res = await draftMealAction(form);
     setBusy(false);
@@ -219,6 +292,15 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
       const preview = !res.data.photo_preview_url && photo instanceof File ? URL.createObjectURL(photo) : res.data.photo_preview_url;
       setDraft({ ...res.data, photo_preview_url: preview });
     } else setNotice(res.error);
+  }
+
+  /** Logging on a past day keeps the current clock time but moves it to that date. */
+  function nowForView(): string {
+    if (isToday) return localISO();
+    const t = new Date();
+    const hh = String(t.getHours()).padStart(2, "0");
+    const mm = String(t.getMinutes()).padStart(2, "0");
+    return localISO(new Date(`${viewDate}T${hh}:${mm}:00`));
   }
 
   function onText(text: string) {
@@ -266,9 +348,7 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
         resolution: i.is_estimated ? "estimated_range" : "default_unit",
       };
     });
-    const next = [...localItems, ...added];
-    setItems(next);
-    saveLocalDay(today, next);
+    updateDay(viewDate, (prev) => [...prev, ...added]);
     setFresh(new Set(added.map((a) => a.key)));
     setPulse((p) => p + 1);
     setLastEvent({ kind: list.some((i) => i.from_photo) ? "photo" : "logged", n: Date.now() });
@@ -278,9 +358,9 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
 
   function reloadSample() {
     seedLocalSample(today);
-    const d = loadLocalDay(today);
-    setItems(d.items);
-    setPast(d.pastLogDates);
+    const d = loadLocalAll();
+    setLocalDays(d.days);
+    setViewLocal(today);
     if (d.goals) setGoals(d.goals);
     setUsedQuick(new Set());
     setPulse((p) => p + 1);
@@ -289,13 +369,13 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
 
   function openSampleDraft() {
     setSaveError(null);
-    setDraft(sampleDraft(localISO()));
+    setDraft(sampleDraft(nowForView()));
   }
 
   function resetLocal() {
-    clearLocalDay(today);
-    setItems([]);
-    setNotice("داده‌های امروز پاک شد.");
+    clearLocalDay(viewDate);
+    setLocalDays((prev) => ({ ...prev, [viewDate]: [] }));
+    setNotice(isToday ? "داده‌های امروز پاک شد." : "داده‌های این روز پاک شد.");
   }
 
   function confirmDraft(meal_type: MealType, list: DraftItem[]) {
@@ -343,11 +423,7 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
         macros: macrosForGrams(edit.food, edit.grams),
         resolution: edit.unit === "گرم" ? "exact" : it.resolution,
       };
-      setItems((prev) => {
-        const next = prev.map((x) => (x.key === it.key ? updated : x));
-        if (isLocal) saveLocalDay(today, next);
-        return next;
-      });
+      updateDay(viewDate, (prev) => prev.map((x) => (x.key === it.key ? updated : x)));
       setFresh(new Set([it.key]));
       setPulse((p) => p + 1);
       setEditing(null);
@@ -369,6 +445,7 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
   }
 
   function deleteItem(it: LoggedItem) {
+    const day = viewDate;
     setEditing(null);
     setEditError(null);
     setLeaving((prev) => new Set(prev).add(it.key));
@@ -397,11 +474,7 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
           } else router.refresh();
         });
       } else {
-        setItems((prev) => {
-          const next = prev.filter((x) => x.key !== it.key);
-          if (isLocal) saveLocalDay(today, next);
-          return next;
-        });
+        updateDay(day, (prev) => prev.filter((x) => x.key !== it.key));
         unhide();
       }
     };
@@ -439,25 +512,41 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
     <div className="flex min-h-dvh flex-col">
       <main className="mx-auto w-full max-w-md flex-1 px-4 pt-[max(20px,env(safe-area-inset-top))] pb-56">
         <header className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[13px] text-ink-2">{faDayLabel(today)}</p>
-            <h1 className="text-2xl font-bold">امروز</h1>
+          <div key={viewDate} className="min-w-0 shrink-0 animate-[fade_240ms_ease-out_both]">
+            <p className="whitespace-nowrap text-[13px] text-ink-2">{faDayLabel(viewDate)}</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">{dayTitle}</h1>
+              {!isToday && (
+                <button type="button" onClick={() => goTo(today)} className="animate-rise whitespace-nowrap rounded-full bg-mint px-2.5 py-1 text-[12px] font-semibold text-green-ink">
+                  برو به امروز
+                </button>
+              )}
+            </div>
           </div>
           {isSample && (
             <span className="rounded-full border border-dashed border-line px-2.5 py-1 text-[11px] text-ink-2">داده نمونه</span>
           )}
           {isLocal && (
-            <div className="flex items-center gap-2">
-              <span className="rounded-full border border-dashed border-line px-2.5 py-1 text-[11px] text-ink-2" title="بدون ورود؛ داده فقط در همین مرورگر ذخیره می‌شود">حالت بررسی</span>
-              <button type="button" onClick={reloadSample} className="rounded-full px-2 py-1 text-[11px] text-green-ink hover:bg-mint">نمونه</button>
+            <div className="flex flex-wrap items-center justify-end gap-x-1 gap-y-1">
+              <span className="whitespace-nowrap rounded-full border border-dashed border-line px-2.5 py-1 text-[11px] text-ink-2" title="بدون ورود؛ داده فقط در همین مرورگر ذخیره می‌شود">حالت بررسی</span>
+              <button type="button" onClick={reloadSample} className="whitespace-nowrap rounded-full px-2 py-1 text-[11px] text-green-ink hover:bg-mint">نمونه</button>
               {items.length > 0 && (
-                <button type="button" onClick={resetLocal} className="rounded-full px-2 py-1 text-[11px] text-ink-2 hover:bg-track">پاک کردن امروز</button>
+                <button type="button" onClick={resetLocal} className="whitespace-nowrap rounded-full px-2 py-1 text-[11px] text-ink-2 hover:bg-track">پاک کردن روز</button>
               )}
             </div>
           )}
         </header>
 
-        <section aria-label="کالری امروز" className="mt-5 rounded-[var(--radius-card)] border border-line bg-surface px-4 pt-6 pb-5 shadow-[var(--shadow-soft)]">
+        <DayStrip today={today} selected={viewDate} marks={marks} onSelect={goTo} />
+
+        <div className={`transition-opacity duration-200 ${navPending ? "opacity-60" : ""}`}>
+        <section
+          aria-label={`کالری ${dayTitle}`}
+          onPointerDown={onPointerDown}
+          onPointerUp={onPointerUp}
+          onPointerCancel={() => (swipe.current = null)}
+          className="mt-3 touch-pan-y rounded-[var(--radius-card)] border border-line bg-surface px-4 pt-6 pb-5 shadow-[var(--shadow-soft)]"
+        >
           <CalorieRing consumed={totals.macros.kcal} goal={goals.kcal} estimated={est.kcal} pulseKey={pulse} />
           <div className="mt-7">
             <MacroBars
@@ -470,14 +559,27 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
           </div>
         </section>
 
-        <div className="mt-4 grid gap-4">
-          {nutiOn ? (
+        <div key={viewDate} className={`mt-4 grid gap-4 ${slide === "newer" ? "animate-day-newer" : slide === "older" ? "animate-day-older" : ""}`}>
+          {!isToday ? (
+            <InsightCard text={pastSummary.text} hint={pastSummary.hint} />
+          ) : nutiOn ? (
             <NutiCard mood={nuti.mood} text={nuti.text} hint={items.length ? insight.hint : undefined} hopKey={pulse} celebrate={celebrate} />
           ) : (
             <InsightCard text={insight.text} hint={insight.hint} />
           )}
-          <StreakCard today={today} logDates={logDates} current={streak.current} loggedToday={loggedToday} complete={complete} />
-          <MealList groups={groups} freshKeys={fresh} leavingKeys={leaving} onAdd={addToMeal} onEdit={(it) => { setEditError(null); setEditing(it); }} />
+          {isToday && <StreakCard today={today} logDates={logDates} current={streak.current} loggedToday={loggedToday} complete={complete} />}
+          <MealList
+            title={isToday ? "وعده‌های امروز" : `وعده‌های ${dayTitle}`}
+            groups={groups}
+            freshKeys={fresh}
+            leavingKeys={leaving}
+            onAdd={addToMeal}
+            onEdit={(it) => {
+              setEditError(null);
+              setEditing(it);
+            }}
+          />
+        </div>
         </div>
       </main>
 
@@ -496,6 +598,11 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
 
       <div className="fixed inset-x-0 bottom-0 z-10">
         <div className="mx-auto max-w-md border-t border-line/60 bg-ground/95 px-4 pt-2.5 pb-3 backdrop-blur-sm sm:rounded-t-[var(--radius-card)] sm:border-x">
+          {!isToday && !toast && (
+            <p className="mb-2 text-center text-[12px] text-ink-2">
+              ثبت برای <span className="font-semibold text-green-ink">{dayTitle}</span>
+            </p>
+          )}
           {toast && (
             <div role="status" key={toast.id} className="animate-rise mb-2 flex items-center justify-between gap-3 rounded-[var(--radius-btn)] bg-ink py-2 ps-3 pe-1.5 text-[13px] text-ground">
               <span className="min-w-0">{toast.text}</span>

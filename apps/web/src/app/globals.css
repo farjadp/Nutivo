@@ -78,6 +78,8 @@
   --animate-glow: glow 1200ms var(--ease-out-expo) both;
   --animate-sheet: sheet 380ms var(--ease-out-expo) both;
   --animate-leave: leave 260ms var(--ease-out-expo) both;
+  --animate-day-newer: day-newer 320ms var(--ease-out-expo) both;
+  --animate-day-older: day-older 320ms var(--ease-out-expo) both;
 }
 
 @keyframes pop {
@@ -96,6 +98,9 @@
   from { opacity: 1; transform: translateX(0); max-height: 80px; }
   to { opacity: 0; transform: translateX(-24px); max-height: 0; padding-block: 0; }
 }
+/* RTL: newer days come from the left, older days from the right. */
+@keyframes day-newer { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes day-older { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes fade {
   from { opacity: 0; }
   to { opacity: 1; }

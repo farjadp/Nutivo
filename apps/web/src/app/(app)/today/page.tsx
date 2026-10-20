@@ -6,7 +6,7 @@ import { isAuthDisabled, isSupabaseConfigured } from "@/shared/config";
 export const metadata = { title: "امروز · Nutivo" };
 export const dynamic = "force-dynamic";
 
-export default async function TodayPage() {
+export default async function TodayPage({ searchParams }: { searchParams: Promise<{ d?: string }> }) {
   if (!isSupabaseConfigured()) {
     // No backend yet: labelled sample data so the screen can be reviewed.
     return <TodayView today={SAMPLE_TODAY} initialItems={SAMPLE_ITEMS} goals={SAMPLE_GOALS} pastLogDates={SAMPLE_LOG_DATES} mode="sample" />;
@@ -15,6 +15,7 @@ export default async function TodayPage() {
     // Review mode without login: real Claude + food database, meals saved in this browser.
     return <TodayView today={SAMPLE_TODAY} initialItems={[]} goals={SAMPLE_GOALS} pastLogDates={[]} mode="local" />;
   }
-  const day = await loadDay();
-  return <TodayView today={day.today} initialItems={day.items} goals={day.goals} pastLogDates={day.pastLogDates} mode="live" />;
+  const { d } = await searchParams;
+  const day = await loadDay(d);
+  return <TodayView today={day.today} date={day.date} initialItems={day.items} goals={day.goals} pastLogDates={day.pastLogDates} stats={day.stats} mode="live" />;
 }

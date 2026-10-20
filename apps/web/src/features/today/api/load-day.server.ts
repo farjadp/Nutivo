@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import type { LoggedItem } from "@/entities/day/sample";
 import { foodFromRow } from "@/entities/food/map";
 import { createClient } from "@/lib/supabase/server";
+import { addDays } from "@/shared/lib/format";
+import { DAY_WINDOW, type DayStats } from "../model/day";
 
 /** YYYY-MM-DD for an instant in an IANA timezone. */
 export function localDate(at: Date | string, timeZone: string): string {
@@ -32,7 +34,8 @@ interface EntryRow {
   }[];
 }
 
-export async function loadDay() {
+/** Loads one day (default today) plus per-day totals for the day strip. `requested` is clamped to the strip window. */
+export async function loadDay(requested?: string) {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) redirect("/login");
@@ -44,7 +47,10 @@ export async function loadDay() {
   const tz: string = profile.timezone ?? "America/Toronto";
   const now = new Date();
   const today = localDate(now, tz);
-  const since = new Date(now.getTime() - 22 * 86400000).toISOString();
+  const oldest = addDays(today, -(DAY_WINDOW - 1));
+  const date = requested && /^\d{4}-\d{2}-\d{2}$/.test(requested) && requested <= today && requested >= oldest ? requested : today;
+  // One extra day on the start so timezone edges are covered; filtered by local date below.
+  const since = new Date(new Date(`${oldest}T00:00:00Z`).getTime() - 86400000).toISOString();
 
   const { data, error } = await supabase
     .from("meal_entries")
@@ -57,12 +63,20 @@ export async function loadDay() {
 
   const items: LoggedItem[] = [];
   const pastDates = new Set<string>();
+  const stats: Record<string, DayStats> = {};
+  const mealsByDay: Record<string, Set<MealType>> = {};
   for (const e of entries) {
     const d = localDate(e.eaten_at, tz);
-    if (d !== today) {
-      pastDates.add(d);
-      continue;
+    if (d < oldest) continue;
+    if (d !== today) pastDates.add(d);
+    const s = (stats[d] ??= { kcal: 0, protein_g: 0, meals: 0 });
+    for (const it of e.entry_items) {
+      s.kcal += Number(it.kcal);
+      s.protein_g += Number(it.protein_g);
     }
+    (mealsByDay[d] ??= new Set()).add(e.meal_type);
+    s.meals = mealsByDay[d]!.size;
+    if (d !== date) continue;
     for (const it of [...e.entry_items].sort((a, b) => a.position - b.position)) {
       if (!it.foods) continue;
       items.push({
@@ -91,5 +105,5 @@ export async function loadDay() {
     fat_g: Number(profile.goal_fat_g),
   };
 
-  return { today, items, goals, pastLogDates: [...pastDates].sort() };
+  return { today, date, items, goals, pastLogDates: [...pastDates].sort(), stats };
 }

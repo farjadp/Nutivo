@@ -27,3 +27,24 @@ export function completeDay(items: LoggedItem[], goals: Goals) {
   const loggedThree = new Set(items.map((i) => i.meal_type)).size >= 3;
   return { kcalOk, proteinOk, loggedThree, done: kcalOk && proteinOk && loggedThree, met: [kcalOk, proteinOk, loggedThree].filter(Boolean).length };
 }
+
+/** Per-day summary used by the day strip (status dots) and the streak. */
+export interface DayStats {
+  kcal: number;
+  protein_g: number;
+  meals: number;
+}
+
+export function statsOf(items: LoggedItem[]): DayStats {
+  const m = sumMacros(items.map((i) => i.macros));
+  return { kcal: m.kcal, protein_g: m.protein_g, meals: new Set(items.map((i) => i.meal_type)).size };
+}
+
+/** Same rule as completeDay, from totals only. */
+export function statsComplete(s: DayStats | undefined, goals: Goals): boolean {
+  if (!s || s.meals === 0) return false;
+  return s.kcal >= goals.kcal * 0.9 && s.kcal <= goals.kcal * 1.1 && s.protein_g >= goals.protein_g * 0.9 && s.meals >= 3;
+}
+
+/** How many past days the day strip reaches back (today included). */
+export const DAY_WINDOW = 21;
