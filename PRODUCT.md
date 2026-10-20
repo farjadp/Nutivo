@@ -34,7 +34,24 @@ Version 1: profile and goals (kcal, protein, carbs, fat), text and photo logging
 
 ## Brand Commitments
 
-Name: Nutivo. Voice: direct, warm, never judgmental about eating; practical next-step advice; no moralising. Animation and gamification matter to the founder: behaviour-based (logging streaks, "complete day", weekly badge), never calorie-shaming; one forgiven day per week. No pure defaults: no Inter/Arial, no purple-blue gradients, no bounce easing, no nested cards (founder's global rule). Persian typography done properly (ZWNJ, Persian digits, RTL).
+Name: Nutivo. Tagline: "Eat Smarter. Live Better." Binding brand document: Notion "سند هویت بصری Nutivo" v1.0 (https://app.notion.com/p/3ff370c6d62481c9ba34ef451d8593fe), supplied by the founder on 2026-10-20. It pins the visual world; it overrides any concept roll.
+
+- Colors: Persian Green #00A693 (primary, action, user), Imperial Purple #66023C (secondary, AI insight, premium). Deep Green #007F71 for buttons with white text. Neutrals: Royal White #FAF9F6 ground, #FFFFFF cards, Charcoal #20252B text, Slate #667085 secondary text, #E5E7EB borders. Mint #EAF8F5 and Soft Purple #F5EAF0 tints. Ratio guide ~70/20/10 neutral/green/purple.
+- Rule: green = what the user does; purple = what Nutivo analyses. Purple never competes with green for attention.
+- Semantic: success #16803C, warning #D97706, error #DC2626 (real errors only), info #2563EB. Going over calories is a soft warning with an explanation, never red.
+- Chart colors: calories #00A693, protein #66023C, carbs #2563EB, fat #D97706; target always visible; estimated values visually distinct from confirmed.
+- Type: Vazirmatn (Persian), Plus Jakarta Sans (English); tabular figures for nutrition numbers. Scale: display 32–40 bold, page 24 bold, section 20 semibold, card 16 semibold, body 14–16, caption 12–13.
+- UI: minimal, calm, data-driven. Card radius 16, button radius 12, 8px grid, very soft shadows, no heavy shadows, no stacked gradients, no decorative glass. Icons: Lucide, outline/rounded, 1.75–2px stroke.
+- Logo: abstract geometric symbol + wordmark (balance + intelligence); no apple, fork, plate, or digital brain.
+- Voice: scientific but simple, supportive not judgmental, actionable, honest about accuracy.
+- Iranian identity shows in color, finesse and character, not historical ornament. Unverified historical claims about the purple stay out of brand copy.
+- Founder also wants animation and gamification: behaviour-based (logging streaks, "complete day", weekly badge), never calorie-shaming, one forgiven day per week. No Inter/Arial, no purple-blue gradients, no bounce easing, no nested cards (founder's global rule).
+
+Implementation notes (measured 2026-10-20, to resolve in DESIGN.md):
+- #00A693 on white is 3.05:1 and on #FAF9F6 2.9:1: fine for fills, rings and large shapes, not for body text or small labels. Text in green uses #007F71 (4.91:1).
+- Protein uses the AI color in charts, which blurs "purple = Nutivo's analysis". Keep the brand's mapping but always pair the protein series with its label so color is never the only cue.
+- #66023C is unreadable on dark grounds (1.2:1 on #20252B); dark mode needs a lightened purple and green variant.
+- #D97706 on white is 3.19:1: use for fills and icons; warning text needs a darker amber.
 
 ## Evidence on Hand
 
