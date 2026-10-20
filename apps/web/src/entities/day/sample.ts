@@ -75,6 +75,10 @@ export interface QuickMeal {
   label: string;
   meal_type: MealType;
   build: () => LoggedItem[];
+  /** Food whose icon the chip shows; defaults to a lookup by label. */
+  iconFood?: Food;
+  /** "Yesterday's breakfast" style chip. */
+  yesterday?: boolean;
 }
 
 export const SAMPLE_QUICK_MEALS: QuickMeal[] = [

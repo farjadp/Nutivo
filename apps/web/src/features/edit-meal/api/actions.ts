@@ -89,6 +89,19 @@ export async function updateEntryItemAction(input: z.infer<typeof UpdateSchema>)
   return { ok: true };
 }
 
+/** Delete a whole meal entry (undo of a one-tap repeat). Items cascade. */
+export async function deleteEntryAction(entryId: string): Promise<EditResult> {
+  if (!isSupabaseConfigured() || isAuthDisabled()) return { ok: false, error: "در این حالت حذف در مرورگر انجام می‌شود." };
+  if (!z.string().uuid().safeParse(entryId).success) return { ok: false, error: "شناسه معتبر نیست." };
+  const { supabase, user } = await requireUser();
+  if (!user) return { ok: false, error: "برای حذف باید وارد حساب شوی." };
+  const { data: gone, error } = await supabase.from("meal_entries").delete().eq("id", entryId).select("id");
+  if (error || !gone?.length) return { ok: false, error: "برگرداندن انجام نشد." };
+  void logEvent({ kind: "activity", event: "meal.entry_undone", actor_id: user.id, actor_email: user.email, entity: "meal_entry", entity_id: entryId });
+  revalidatePath("/today");
+  return { ok: true };
+}
+
 /** Delete one item; the meal entry goes too when it has nothing left. */
 export async function deleteEntryItemAction(itemId: string): Promise<EditResult> {
   if (!isSupabaseConfigured() || isAuthDisabled()) return { ok: false, error: "در این حالت حذف در مرورگر انجام می‌شود." };

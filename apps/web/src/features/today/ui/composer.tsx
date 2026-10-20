@@ -59,9 +59,9 @@ export function Composer({ quickMeals, usedQuick, busy, nuti = false, onQuick, o
               type="button"
               disabled={usedQuick.has(q.id)}
               onClick={() => onQuick(q)}
-              className="flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface py-1.5 ps-2 pe-3 text-[13px] font-medium transition-colors duration-150 hover:border-green hover:bg-mint disabled:cursor-default disabled:opacity-45"
+              className={`flex shrink-0 items-center gap-1.5 rounded-full border py-1.5 ps-2 pe-3 text-[13px] font-medium transition-colors duration-150 hover:border-green hover:bg-mint disabled:cursor-default disabled:opacity-45 ${q.yesterday ? "border-green/50 bg-mint text-green-ink" : "border-line bg-surface"}`}
             >
-              <FoodIcon food={{ name_fa: q.label }} size={18} className="text-green-ink" label="" />
+              <FoodIcon food={q.iconFood ?? { name_fa: q.label }} size={18} className="text-green-ink" label="" />
               {q.label}
             </button>
           ))}

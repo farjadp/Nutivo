@@ -1,12 +1,12 @@
 "use client";
-import { dayTotals, macrosForGrams, streakStatus, type Goals, type MealType } from "@nutivo/core";
+import { dayTotals, macrosForGrams, streakStatus, suggestRepeats, type Goals, type MealType, type RepeatMeal } from "@nutivo/core";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { confirmMealAction, discardDraftPhotoAction, draftMealAction } from "@/features/log-meal/api/actions";
 import type { Draft, DraftItem } from "@/features/log-meal/model/draft";
 import { localISO, preparePhoto } from "@/features/log-meal/model/photo";
 import { ConfirmSheet } from "@/features/log-meal/ui/confirm-sheet";
-import { deleteEntryItemAction, updateEntryItemAction } from "@/features/edit-meal/api/actions";
+import { deleteEntryAction, deleteEntryItemAction, updateEntryItemAction } from "@/features/edit-meal/api/actions";
 import { EditItemSheet, type ItemEdit } from "@/features/edit-meal/ui/edit-item-sheet";
 import { SAMPLE_QUICK_MEALS, type LoggedItem, type QuickMeal } from "@/entities/day/sample";
 import { sampleDraft } from "@/entities/day/sample-draft";
@@ -14,6 +14,7 @@ import { browserToday, clearLocalDay, isLocalSeeded, loadLocalAll, saveLocalDay,
 import { addDays, faDayLabel, faInt } from "@/shared/lib/format";
 import { completeDay, DAY_WINDOW, estimatedMacros, groupMeals, statsComplete, statsOf, type DayStats } from "../model/day";
 import { DayStrip, type DayMark } from "./day-strip";
+import { repeatsToQuick } from "../model/repeats";
 import { BottomNav } from "./bottom-nav";
 import { CalorieRing } from "./calorie-ring";
 import { Composer } from "./composer";
@@ -33,6 +34,8 @@ interface Props {
   /** Live mode: the day being shown (YYYY-MM-DD) and per-day totals for the strip. */
   date?: string;
   stats?: Record<string, DayStats>;
+  /** Live mode: one-tap repeats from the user's history (computed on the server in their timezone). */
+  repeats?: RepeatMeal[];
   /** sample: demo data · live: Supabase + login · local: no login, saved in this browser */
   mode: "sample" | "live" | "local";
   quickMeals?: QuickMeal[];
@@ -66,7 +69,7 @@ function insightFor(remainingKcal: number, remainingProtein: number, proteinPct:
   };
 }
 
-export function TodayView({ today: todayProp, date: dateProp, stats: statsProp, initialItems, goals: goalsProp, pastLogDates: pastProp, mode, quickMeals = SAMPLE_QUICK_MEALS }: Props) {
+export function TodayView({ today: todayProp, date: dateProp, stats: statsProp, repeats: repeatsProp, initialItems, goals: goalsProp, pastLogDates: pastProp, mode, quickMeals: sampleQuick = SAMPLE_QUICK_MEALS }: Props) {
   const isSample = mode === "sample";
   const isLocal = mode === "local";
   const router = useRouter();
@@ -185,6 +188,7 @@ export function TodayView({ today: todayProp, date: dateProp, stats: statsProp, 
   function goTo(d: string) {
     if (d === viewDate || d > today || d < oldest) return;
     setSlide(d > viewDate ? "newer" : "older");
+    setUsedQuick(new Set());
     setEditing(null);
     if (isLive) startNav(() => router.push(d === today ? "/today" : `/today?d=${d}`, { scroll: false }));
     else setViewLocal(d);
@@ -251,15 +255,74 @@ export function TodayView({ today: todayProp, date: dateProp, stats: statsProp, 
     return nutiSay(sit, vars, daySeed(today, lastEvent?.n ?? items.length));
   })();
 
+  const quickMeals = useMemo<QuickMeal[]>(() => {
+    if (isSample) return sampleQuick;
+    if (isLive) return repeatsToQuick(repeatsProp ?? []);
+    return repeatsToQuick(suggestRepeats({ history: localDays, today: viewDate, hour: new Date().getHours() }));
+  }, [isSample, isLive, sampleQuick, repeatsProp, localDays, viewDate]);
+
   function addQuick(q: QuickMeal) {
     const added = q.build();
-    updateDay(viewDate, (prev) => [...prev, ...added]);
-    setFresh(new Set(added.map((a) => a.key)));
     setUsedQuick((prev) => new Set(prev).add(q.id));
+    if (isLive) {
+      startSaving(async () => {
+        const res = await confirmMealAction({
+          meal_type: q.meal_type,
+          raw_input: q.label,
+          input_channel: "web_quick",
+          photo_path: null,
+          eaten_at: nowForView(),
+          items: added.map((i) => ({ food_id: i.food.id, name_raw: i.name_raw, qty: i.qty, unit: i.unit, grams: i.grams, is_estimated: i.is_estimated, confidence: i.confidence })),
+        });
+        if (!res.ok) {
+          setUsedQuick((prev) => {
+            const n = new Set(prev);
+            n.delete(q.id);
+            return n;
+          });
+          setNotice(res.error);
+          return;
+        }
+        router.refresh();
+        setNotice(`${q.label} ثبت شد.`, {
+          label: "برگردان",
+          run: () => {
+            void deleteEntryAction(res.data.entry_id).then((r) => {
+              if (!r.ok) return setNotice(r.error);
+              setUsedQuick((prev) => {
+                const n = new Set(prev);
+                n.delete(q.id);
+                return n;
+              });
+              setNotice("برگشت.");
+              router.refresh();
+            });
+          },
+        });
+      });
+      return;
+    }
+    const day = viewDate;
+    updateDay(day, (prev) => [...prev, ...added]);
+    setFresh(new Set(added.map((a) => a.key)));
     setPulse((p) => p + 1);
     setLastEvent({ kind: "logged", n: Date.now() });
-    setNotice(`${q.label} ثبت شد.`);
+    const keys = new Set(added.map((a) => a.key));
+    setNotice(`${q.label} ثبت شد.`, {
+      label: "برگردان",
+      run: () => {
+        updateDay(day, (prev) => prev.filter((x) => !keys.has(x.key)));
+        setUsedQuick((prev) => {
+          const n = new Set(prev);
+          n.delete(q.id);
+          return n;
+        });
+        setPulse((p) => p + 1);
+        setNotice("برگشت.");
+      },
+    });
   }
+
 
   // Live mode: a new day from the server is not a "new log"; reset the counter without the glow.
   const [prevDate, setPrevDate] = useState(viewDate);
@@ -501,7 +564,7 @@ export function TodayView({ today: todayProp, date: dateProp, stats: statsProp, 
 
   function addToMeal(m: MealType) {
     const q = quickMeals.find((x) => x.meal_type === m && !usedQuick.has(x.id));
-    if (q && (isSample || isLocal)) addQuick(q);
+    if (q) addQuick(q);
     else {
       setNotice("بنویس چی خوردی یا عکس بگیر.");
       document.getElementById("log-text")?.focus();
@@ -620,7 +683,7 @@ export function TodayView({ today: todayProp, date: dateProp, stats: statsProp, 
             </div>
           )}
           <Composer
-            quickMeals={isSample || isLocal ? quickMeals : []}
+            quickMeals={quickMeals}
             onSampleDraft={isLocal ? openSampleDraft : undefined}
             usedQuick={usedQuick}
             busy={busy}

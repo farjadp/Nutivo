@@ -109,7 +109,7 @@ export async function draftMealAction(form: FormData): Promise<ActionResult<Draf
 const ConfirmSchema = z.object({
   meal_type: MealTypeSchema,
   raw_input: z.string().max(600),
-  input_channel: z.enum(["web_text", "web_photo"]),
+  input_channel: z.enum(["web_text", "web_photo", "web_quick"]),
   photo_path: z.string().nullable(),
   eaten_at: z.string().datetime({ offset: true }),
   items: z

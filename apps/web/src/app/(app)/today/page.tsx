@@ -17,5 +17,5 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   }
   const { d } = await searchParams;
   const day = await loadDay(d);
-  return <TodayView today={day.today} date={day.date} initialItems={day.items} goals={day.goals} pastLogDates={day.pastLogDates} stats={day.stats} mode="live" />;
+  return <TodayView today={day.today} date={day.date} initialItems={day.items} goals={day.goals} pastLogDates={day.pastLogDates} stats={day.stats} repeats={day.repeats} mode="live" />;
 }

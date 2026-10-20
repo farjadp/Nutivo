@@ -1,5 +1,5 @@
 import "server-only";
-import type { Goals, MealType } from "@nutivo/core";
+import { suggestRepeats, type Goals, type MealType } from "@nutivo/core";
 import { redirect } from "next/navigation";
 import type { LoggedItem } from "@/entities/day/sample";
 import { foodFromRow } from "@/entities/food/map";
@@ -91,6 +91,7 @@ export async function loadDay(requested?: string) {
   const pastDates = new Set<string>();
   const stats: Record<string, DayStats> = {};
   const mealsByDay: Record<string, Set<MealType>> = {};
+  const history: Record<string, LoggedItem[]> = {};
   for (const e of entries) {
     const d = localDate(e.eaten_at, tz);
     if (d < oldest) continue;
@@ -102,6 +103,7 @@ export async function loadDay(requested?: string) {
     }
     (mealsByDay[d] ??= new Set()).add(e.meal_type);
     s.meals = mealsByDay[d]!.size;
+    (history[d] ??= []).push(...entryItems(e));
     if (d !== date) continue;
     items.push(...entryItems(e));
   }
@@ -113,5 +115,8 @@ export async function loadDay(requested?: string) {
     fat_g: Number(profile.goal_fat_g),
   };
 
-  return { userId: auth.user.id, timezone: tz, today, date, items, goals, pastLogDates: [...pastDates].sort(), stats };
+  const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", hourCycle: "h23" }).format(now));
+  const repeats = suggestRepeats({ history, today, hour });
+
+  return { repeats, userId: auth.user.id, timezone: tz, today, date, items, goals, pastLogDates: [...pastDates].sort(), stats };
 }
