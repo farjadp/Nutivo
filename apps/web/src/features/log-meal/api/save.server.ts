@@ -8,7 +8,7 @@ import { logEvent } from "@/lib/server/log";
 export const ConfirmSchema = z.object({
   meal_type: MealTypeSchema,
   raw_input: z.string().max(600),
-  input_channel: z.enum(["web_text", "web_photo", "web_quick", "telegram"]),
+  input_channel: z.enum(["web_text", "web_photo", "web_quick", "telegram", "mobile"]),
   photo_path: z.string().nullable(),
   eaten_at: z.string().datetime({ offset: true }),
   items: z

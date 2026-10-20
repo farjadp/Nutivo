@@ -51,7 +51,11 @@ export interface Linked {
   userId: string;
   hasGoals: boolean;
   timezone: string;
+  /** Where the call comes from; the mobile app reuses this service. Default: telegram. */
+  channel?: "telegram" | "mobile";
 }
+
+const channelOf = (user: Linked) => user.channel ?? "telegram";
 
 /** The Nutivo account behind a Telegram user, refreshing chat and name. Null when not linked yet. */
 export async function linkedUser(from: TgUser, chatId: number): Promise<Linked | null> {
@@ -215,8 +219,8 @@ export async function createDraft(
       kind: "system",
       event: "ai.extract",
       actor_id: user.userId,
-      message: `telegram ${input.photo ? "photo" : "text"} → ${ex.meal.items.length} items`,
-      meta: { model: ex.model, ms: ex.ms, ...ex.usage, input: input.photo ? "photo" : "text", channel: "telegram", items: ex.meal.items.length, unmatched: r.items.filter((i) => !i.food_id).length },
+      message: `${channelOf(user)} ${input.photo ? "photo" : "text"} → ${ex.meal.items.length} items`,
+      meta: { model: ex.model, ms: ex.ms, ...ex.usage, input: input.photo ? "photo" : "text", channel: channelOf(user), items: ex.meal.items.length, unmatched: r.items.filter((i) => !i.food_id).length },
     });
     const stored: StoredDraft = {
       raw_input: text,
@@ -232,7 +236,7 @@ export async function createDraft(
     if (error || !data) return fail("ذخیره پیش‌نویس انجام نشد.", "server");
     return { ok: true, data: view(data.id as string, ex.meal.meal_type, stored) };
   } catch (err) {
-    void logEvent({ kind: "system", level: err instanceof ExtractError ? "warn" : "error", event: "ai.extract_failed", actor_id: user.userId, message: err instanceof Error ? err.message : String(err), meta: { channel: "telegram" } });
+    void logEvent({ kind: "system", level: err instanceof ExtractError ? "warn" : "error", event: "ai.extract_failed", actor_id: user.userId, message: err instanceof Error ? err.message : String(err), meta: { channel: channelOf(user) } });
     return fail(err instanceof ExtractError ? err.userMessage : "یک مشکلی پیش آمد. دوباره بفرست.", "server");
   }
 }
@@ -271,8 +275,8 @@ export async function confirmDraft(user: Linked, id: string): Promise<BotResult<
   const { data: auth } = await db().auth.admin.getUserById(user.userId);
   const res = await saveMeal(db(), { id: user.userId, email: auth.user?.email ?? null }, {
     meal_type: found.meal_type,
-    raw_input: d.raw_input || (d.from_photo ? "عکس از تلگرام" : ""),
-    input_channel: "telegram",
+    raw_input: d.raw_input || (d.from_photo ? (channelOf(user) === "mobile" ? "عکس از اپ" : "عکس از تلگرام") : ""),
+    input_channel: channelOf(user),
     photo_path: d.photo_path,
     eaten_at: d.eaten_at,
     items: d.items.map((i) => ({ food_id: i.food_id!, name_raw: i.name_raw, qty: i.qty, unit: i.unit, grams: i.grams!, is_estimated: i.is_estimated, confidence: i.confidence })),
@@ -293,7 +297,7 @@ export async function cancelDraft(user: Linked, id: string): Promise<BotResult<{
 export async function undoEntry(user: Linked, entryId: string): Promise<BotResult<{ undone: true }>> {
   const { data } = await db().from("meal_entries").delete().eq("id", entryId).eq("user_id", user.userId).select("id");
   if (!data?.length) return fail("این وعده دیگر قابل برگرداندن نیست.", "not_found");
-  void logEvent({ kind: "activity", event: "meal.entry_undone", actor_id: user.userId, entity: "meal_entry", entity_id: entryId, meta: { channel: "telegram" } });
+  void logEvent({ kind: "activity", event: "meal.entry_undone", actor_id: user.userId, entity: "meal_entry", entity_id: entryId, meta: { channel: channelOf(user) } });
   return { ok: true, data: { undone: true } };
 }
 
@@ -334,7 +338,7 @@ export async function addRepeat(user: Linked, repeatId: string, nowUtc: string):
   const res = await saveMeal(db(), { id: user.userId, email: auth.user?.email ?? null }, {
     meal_type: r.meal_type,
     raw_input: repeatLabel(r),
-    input_channel: "telegram",
+    input_channel: channelOf(user),
     photo_path: null,
     eaten_at: isoInTz(new Date(nowUtc), user.timezone),
     items: r.items.map((i) => ({ food_id: i.food.id, name_raw: i.name_raw, qty: i.qty, unit: i.unit, grams: i.grams, is_estimated: i.is_estimated, confidence: i.confidence })),
@@ -368,7 +372,7 @@ export async function reportFor(user: Linked, date?: string, opts: { write?: boo
   if (!fresh && day.items.length && opts.write !== false) {
     const r = await writeAnalysis(day.items, day.goals, day.date, faDayWord(day.date, day.today));
     await storeReport(db(), user.userId, day.date, day.items, day.goals, r);
-    void logEvent({ kind: "system", event: "ai.report", actor_id: user.userId, message: `telegram ${day.date}`, meta: { model: r.model, ms: r.ms, ...r.usage, dropped: r.dropped.length, channel: "telegram" } });
+    void logEvent({ kind: "system", event: "ai.report", actor_id: user.userId, message: `${channelOf(user)} ${day.date}`, meta: { model: r.model, ms: r.ms, ...r.usage, dropped: r.dropped.length, channel: channelOf(user) } });
     stored = { analysis: r.analysis, source_hash: itemsHash(day.items), generated_at: new Date().toISOString() };
   }
   return { date: day.date, day_label: faDayWord(day.date, day.today), facts, analysis: fresh || day.items.length ? stored.analysis : null };

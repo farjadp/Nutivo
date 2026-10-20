@@ -23,7 +23,7 @@ export async function middleware(request: NextRequest) {
   );
   const { data } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
-  const isPublic = path.startsWith("/login") || path.startsWith("/auth") || path.startsWith("/api/cron") || path.startsWith("/api/bot") || (process.env.NODE_ENV !== "production" && path.startsWith("/dev"));
+  const isPublic = path.startsWith("/login") || path.startsWith("/auth") || path.startsWith("/api/cron") || path.startsWith("/api/bot") || path.startsWith("/api/app") || (process.env.NODE_ENV !== "production" && path.startsWith("/dev"));
   if (!data.user && !isPublic) {
     const to = request.nextUrl.clone();
     to.pathname = "/login";
