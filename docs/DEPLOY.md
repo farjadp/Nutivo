@@ -1,0 +1,26 @@
+# Nutivo — استقرار
+
+## کجا
+- **وب‌اپ و API موبایل:** Railway، پروژه `nutivo`، سرویس `web`، منطقه us-east4. آدرس: https://web-production-32973.up.railway.app
+- **دیتابیس، ورود، عکس‌ها:** Supabase ابری، پروژه `Nutivo` (ca-central-1، شناسه `jspcgzwdowgzmcpcstnu`).
+- FigFit در production نیست (مجوز غیرتجاری).
+
+## استقرار
+- مخزن روی GitHub نیست؛ از همین پوشه: `railway up --detach --service web` (پوشه یک بار با `railway link` به پروژه وصل شده).
+- ساخت: `pnpm --filter @nutivo/web build`، اجرا: `pnpm --filter @nutivo/web start`، بررسی سلامت: `/login`.
+- Railway وابستگی‌های آسیب‌پذیر را بلاک می‌کند (مثلاً Next 15.5.4 رد شد). اگر بیلد با «SECURITY VULNERABILITIES» شکست خورد، نسخه گفته‌شده را نصب کن.
+
+## متغیرها
+غیرمحرمانه‌ها روی سرویس تنظیم شده‌اند. این‌ها محرمانه‌اند و فقط از داشبورد Railway وارد می‌شوند:
+- `SUPABASE_SERVICE_ROLE_KEY` (Supabase → Project Settings → API Keys)
+- `ANTHROPIC_API_KEY`
+- `NUTIVO_SECRETS_KEY`، `CRON_SECRET`، `NUTIVO_BOT_SECRET`: هر کدام یک مقدار تازه (`openssl rand -hex 32`). کلیدهای ذخیره‌شده در پنل ادمین با `NUTIVO_SECRETS_KEY` رمز می‌شوند؛ عوضش کنی، باید آن‌ها را دوباره وارد کنی.
+
+## Supabase (داشبورد)
+- Authentication → URL Configuration: Site URL = آدرس Railway؛ Redirect URLs: `https://web-production-32973.up.railway.app/auth/callback`.
+- Authentication → Email Templates: «Magic Link» و «Confirm signup» را با `packages/db/supabase/templates/*.html` پر کن (کد شش‌رقمی برای اپ).
+- ایمیل داخلی Supabase در ساعت فقط چند ایمیل می‌فرستد؛ برای تسترها SMTP اختصاصی لازم است.
+
+## هنوز نه
+- بات تلگرام روی Railway (تا وقتی بات محلی روشن است، دو نسخه با هم تداخل می‌کنند).
+- کرون گزارش شبانه (هر ساعت `GET /api/cron/nightly` با `CRON_SECRET`).
