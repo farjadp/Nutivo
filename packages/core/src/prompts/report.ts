@@ -85,7 +85,7 @@ export function guardNumbers(lines: string[], allowed: Set<number>): { kept: str
 /** «۱۰۵۹» → «۱٬۰۵۹»: Persian thousands separator on 4+ digit integers the model wrote without one. */
 export function groupThousands(text: string): string {
   // Persian digits throughout (the model sometimes slips into Latin digits), then group long integers.
-  text = text.replace(/[0-9]/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]!);
+  text = text.replace(/[0-9]/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]!).replace(/ {2,}/g, " ");
   return text.replace(/(?<![\d۰-۹٫.])([0-9۰-۹]{4,})(?![\d۰-۹٫.])/g, (m) => {
     const latin = toLatinDigits(m);
     const grouped = latin.replace(/\B(?=(\d{3})+(?!\d))/g, "٬");

@@ -3,7 +3,7 @@
  * Outgoing Bot API calls are intercepted and printed; incoming updates are fabricated.
  * Usage: pnpm --filter @nutivo/bot sim   (needs the web app running and NUTIVO_BOT_SECRET in apps/bot/.env)
  */
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Update } from "grammy/types";
 import { createApi } from "./api";
@@ -19,6 +19,7 @@ interface Msg { id: number; text: string; buttons: Btn[][] }
 const chat = new Map<number, Msg>();
 let nextId = 100;
 let updateId = 1;
+let photos = 0;
 const log: string[] = [];
 
 const bot = createBot("000:SIMULATED", {
@@ -37,6 +38,17 @@ bot.api.config.use(async (_prev, method, payload) => {
     chat.set(m.id, m);
     show(m, "BOT ←");
     return { ok: true, result: { message_id: m.id, date: 0, chat: { id: TG_ID, type: "private" }, text: m.text, reply_markup: { inline_keyboard: buttons } } } as never;
+  }
+  if (method === "sendPhoto") {
+    const m = { id: nextId++, text: `[PHOTO] ${String(p.caption ?? "")}`, buttons };
+    chat.set(m.id, m);
+    show(m, "BOT ←");
+    const photo = p.photo as { fileData?: unknown } | undefined;
+    if (photo) {
+      photos++;
+      if (process.env.SIM_OUT && photo.fileData instanceof Uint8Array) await writeFile(path.join(process.env.SIM_OUT, `photo-${photos}.png`), photo.fileData);
+    }
+    return { ok: true, result: { message_id: m.id, date: 0, chat: { id: TG_ID, type: "private" }, caption: m.text, reply_markup: { inline_keyboard: buttons } } } as never;
   }
   if (method === "editMessageText") {
     const m = chat.get(Number(p.message_id)) ?? { id: Number(p.message_id), text: "", buttons: [] };
@@ -89,6 +101,7 @@ async function tap(match: RegExp | string) {
 }
 
 const script = process.argv[2] ?? "full";
+try {
 if (script === "full") {
   await send("/start");
   await tap("کم کردن وزن");
@@ -109,5 +122,25 @@ if (script === "full") {
   await send("۱۵۰");
   await tap(/^ثبت /);
   await send("/today");
+  await tap("گزارش امروز");
 }
-console.log(log.join("\n"));
+if (script === "report") {
+  await send("/start");
+  await tap("کم کردن وزن");
+  await tap("زن");
+  await send("29");
+  await send("165");
+  await send("68");
+  await tap("کمی فعال");
+  await tap("تورنتو / مونترال");
+  await send("صبحانه نون بربری و پنیر و دو تا گردو با چای");
+  await tap(/^ثبت /);
+  await send("ناهار قورمه سبزی با یک کفگیر برنج");
+  await tap(/^ثبت /);
+  await send("/today");
+  await send("/report");
+}
+} finally {
+  log.push(`(photos sent: ${photos})`);
+  console.log(log.join("\n"));
+}

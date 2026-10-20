@@ -1,8 +1,9 @@
 import { toLatinDigits, type DayView, type DraftView, type MealType } from "@nutivo/core";
-import { Bot, InlineKeyboard, type Context } from "grammy";
+import { Bot, InlineKeyboard, InputFile, type Context } from "grammy";
+import { reportText } from "@nutivo/core";
 import type { UserFromGetMe } from "grammy/types";
 import type { Api, OnboardProfile } from "./api";
-import { COPY, dayCard, draftCard, goalsCard, MEAL, n, short } from "./text";
+import { COPY, dayCaption, dayCard, draftCard, goalsCard, MEAL, n, short } from "./text";
 
 /** Per-chat state kept on the server (bot_sessions), so the bot process itself is stateless. */
 interface Session {
@@ -109,13 +110,36 @@ export function createBot(token: string, deps: BotDeps): Bot {
     await ctx.reply(goalsCard(r.data), { parse_mode: "HTML" });
   }
 
+  /** The day as an image card (brand design), with one-tap repeats underneath. Falls back to text if rendering fails. */
   async function showToday(ctx: Context, prefix?: string) {
     const { u, c } = ids(ctx);
-    const r = await api.today(u, c);
-    if (!r.ok) return ctx.reply(r.code === "no_goals" ? "اول هدف‌هایت را تعیین کنیم: /start" : r.error);
+    await ctx.replyWithChatAction("upload_photo").catch(() => undefined);
+    const r = await api.todayCard(u, c);
+    if (!r.ok) {
+      if (r.code === "no_goals") return ctx.reply("اول هدف‌هایت را تعیین کنیم: /start");
+      const t = await api.today(u, c);
+      return t.ok ? ctx.reply(dayCard(t.data), { parse_mode: "HTML" }) : ctx.reply(r.error);
+    }
+    const day = r.data.day;
     const s = await getS(ctx);
-    await setS(ctx, { ...s, repeats: r.data.repeats.map((x) => x.id) });
-    await ctx.reply(`${prefix ? `${prefix}\n\n` : ""}${dayCard(r.data)}`, { parse_mode: "HTML", ...(r.data.repeats.length ? { reply_markup: dayKeyboard(r.data) } : {}) });
+    await setS(ctx, { ...s, repeats: day.repeats.map((x) => x.id) });
+    const kb = dayKeyboard(day);
+    if (day.repeats.length) kb.row();
+    kb.text("گزارش امروز", `rpt:${day.date}`);
+    await ctx.replyWithPhoto(new InputFile(Buffer.from(r.data.png_base64, "base64"), "nutivo-today.png"), {
+      caption: `${prefix ? `${prefix}\n\n` : ""}${dayCaption(day)}`,
+      parse_mode: "HTML",
+      reply_markup: kb,
+    });
+  }
+
+  async function showReport(ctx: Context, date?: string) {
+    const { u, c } = ids(ctx);
+    await ctx.replyWithChatAction("typing").catch(() => undefined);
+    const r = await api.report(u, c, date);
+    if (!r.ok) return ctx.reply(r.code === "no_goals" ? "اول هدف‌هایت را تعیین کنیم: /start" : r.error);
+    if (!r.data.facts.logged) return ctx.reply(`برای ${r.data.day_label} چیزی ثبت نشده؛ گزارشی نیست.`);
+    await ctx.reply(reportText(r.data), { parse_mode: "HTML" });
   }
 
   async function startDraft(ctx: Context, body: { text?: string; photo?: { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" } }) {
@@ -148,6 +172,7 @@ export function createBot(token: string, deps: BotDeps): Bot {
 
   bot.command("help", (ctx) => ctx.reply(COPY.help, { parse_mode: "HTML" }));
   bot.command("today", (ctx) => showToday(ctx));
+  bot.command("report", (ctx) => showReport(ctx));
   bot.command("link", async (ctx) => {
     const { u, c } = ids(ctx);
     const code = ctx.match?.trim();
@@ -216,6 +241,11 @@ export function createBot(token: string, deps: BotDeps): Bot {
     const r = await api.undo(u, c, ctx.match[1]!);
     await ctx.answerCallbackQuery(r.ok ? { text: "برگشت" } : { text: r.error, show_alert: true });
     if (r.ok) await ctx.editMessageText(COPY.undone).catch(() => undefined);
+  });
+
+  bot.callbackQuery(/^rpt:(\d{4}-\d{2}-\d{2})$/, async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await showReport(ctx, ctx.match[1]);
   });
 
   bot.callbackQuery(/^rp:(\d)$/, async (ctx) => {

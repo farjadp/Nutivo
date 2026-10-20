@@ -6,7 +6,9 @@ import {
   cancelDraft,
   confirmDraft,
   createDraft,
+  dayCard,
   dayView,
+  reportFor,
   editDraft,
   getSession,
   linkedUser,
@@ -65,6 +67,8 @@ const Bodies = {
   undo: Base.extend({ entry_id: z.string().uuid() }),
   today: Base.extend({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
   repeat: Base.extend({ id: z.string().max(400), now: Iso }),
+  today_card: Base.extend({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
+  report: Base.extend({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
 } as const;
 type Action = keyof typeof Bodies;
 
@@ -75,8 +79,8 @@ function authorized(req: Request): boolean {
   return timingSafeEqual(Buffer.from(got), Buffer.from(secret));
 }
 
-const NEEDS_USER = new Set<Action>(["draft", "draft_edit", "draft_confirm", "draft_cancel", "undo", "today", "repeat", "onboard"]);
-const NEEDS_GOALS = new Set<Action>(["draft", "draft_edit", "draft_confirm", "today", "repeat"]);
+const NEEDS_USER = new Set<Action>(["draft", "draft_edit", "draft_confirm", "draft_cancel", "undo", "today", "repeat", "onboard", "today_card", "report"]);
+const NEEDS_GOALS = new Set<Action>(["draft", "draft_edit", "draft_confirm", "today", "repeat", "today_card", "report"]);
 
 /**
  * Internal API for the Telegram bot (apps/bot). Not for browsers: requires the shared NUTIVO_BOT_SECRET.
@@ -131,6 +135,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
       }
       case "repeat":
         return json(await addRepeat(user!, String(b.id), b.now));
+      case "today_card": {
+        const card = await dayCard(user!, b.date as string | undefined);
+        return json(card ? { ok: true, data: { png_base64: card.png.toString("base64"), day: card.day } } : { ok: false, error: "اول هدف‌هایت را تعیین کنیم.", code: "no_goals" });
+      }
+      case "report": {
+        const r = await reportFor(user!, b.date as string | undefined);
+        return json(r ? { ok: true, data: r } : { ok: false, error: "اول هدف‌هایت را تعیین کنیم.", code: "no_goals" });
+      }
     }
   } catch (err) {
     void logEvent({ kind: "system", level: "error", event: "bot.api_failed", message: `${a}: ${err instanceof Error ? err.message : String(err)}` });

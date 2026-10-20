@@ -16,6 +16,7 @@ from (values
   ('fa:salad-shirazi',             array['سالاد شیرازی','شیرازی','سالاد','salad']),
   ('fa:mast',                      array['ماست','yogurt','yoghurt']),
   ('fa:dugh',                      array['دوغ','doogh']),
+  ('fa:chay',                      array['چای','چایی','چای سیاه','چای ساده','tea','black tea']),
   ('fa:panir-feta',                array['پنیر','پنیر لیقوان','پنیر فتا','فتا','feta','cheese']),
   ('fa:tokhm-morgh',               array['تخم مرغ','تخم‌مرغ','تخم مرغ آب پز','نیمرو','egg','eggs']),
   ('fa:kareh',                     array['کره','butter']),

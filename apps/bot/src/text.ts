@@ -52,6 +52,12 @@ export function dayCard(d: DayView, title = d.date === d.today ? "امروز" : 
   return lines.join("\n");
 }
 
+/** Caption under the day card image: the one line that matters plus what is left. */
+export function dayCaption(d: DayView): string {
+  const left = d.remaining.kcal >= 0 ? `${n(d.remaining.kcal)} کالری${d.remaining.protein_g > 0 ? ` و ${n(d.remaining.protein_g)} گرم پروتئین` : ""} مانده` : `${n(-d.remaining.kcal)} کالری بیشتر از هدف`;
+  return `<b>${d.date === d.today ? "امروز" : esc(d.date)}</b>: ${n(d.totals.kcal)} از ${n(d.goals.kcal)} کالری، ${left}.${d.meals.length ? "" : "\nبنویس چی خوردی یا عکس بفرست."}`;
+}
+
 export function goalsCard(g: Goals): string {
   return [
     "<b>هدف‌های روزانه‌ات آماده است</b>",
@@ -73,7 +79,8 @@ export const COPY = {
     "<b>راهنما</b>",
     "• بنویس چی خوردی: «صبحانه نون و پنیر و دو تا گردو»",
     "• یا از غذایت عکس بفرست",
-    "• /today خلاصه امروز",
+    "• /today کارت امروز",
+    "• /report گزارش امروز (شب‌ها خودم می‌فرستم)",
     "• /link کد ـ وصل‌کردن به حساب وب",
     "",
     "هیچ وعده‌ای بدون تأیید خودت حساب نمی‌شود.",

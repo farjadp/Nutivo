@@ -51,3 +51,13 @@ describe("toGrams", () => {
     expect(unitKey("TBSP")).toBe("tbsp");
   });
 });
+
+describe("unit synonyms", () => {
+  it("«تکه» uses the food's «برش» and is marked estimated", () => {
+    const bread = { ...chelo, id: "bread" };
+    const u = [{ food_id: "bread", unit_fa: "برش", unit_en: "slice", grams_default: 70, grams_min: 50, grams_max: 100 }];
+    const g = toGrams(1, "تکه", bread, u);
+    expect(g.grams).toBe(70);
+    expect(g.is_estimated).toBe(true);
+  });
+});

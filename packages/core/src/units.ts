@@ -49,6 +49,8 @@ export const GENERIC_UNIT_FALLBACKS: Record<string, Fallback> = {
   glass: { grams: 240, keys: ["لیوان", "glass", "cup", "cups", "پیمانه"] },
   // Household portions, used only when the food has no own unit (always marked estimated).
   bowl: { grams: 250, keys: ["کاسه", "bowl"] },
+  // One serving when the user names no amount («ناهار قورمه‌سبزی»): a typical home/restaurant portion.
+  serving: { grams: 250, keys: ["پرس", "پُرس", "پورس", "porsion", "portion", "serving", "وعده"] },
   plate: { grams: 300, keys: ["بشقاب", "plate"] },
   ladle: { grams: 120, keys: ["ملاقه", "ladle"] },
   smallBowl: { grams: 100, keys: ["پیاله", "small bowl"] },
@@ -61,6 +63,21 @@ export const GENERIC_UNIT_FALLBACKS: Record<string, Fallback> = {
 
 const FALLBACK_BY_KEY: Map<string, number> = new Map(
   Object.values(GENERIC_UNIT_FALLBACKS).flatMap((f) => f.keys.map((k) => [unitKey(k), f.grams] as const)),
+);
+
+/** Units people use interchangeably, tried in order against the food's own units. Keys are unitKey()-normalised. */
+const UNIT_SYNONYMS: Record<string, string[]> = Object.fromEntries(
+  Object.entries({
+    تکه: ["برش", "کف دست", "عدد"],
+    تیکه: ["تکه", "برش", "کف دست", "عدد"],
+    قطعه: ["تکه", "برش", "عدد"],
+    برش: ["تکه", "کف دست"],
+    دانه: ["عدد"],
+    عدد: ["دانه", "تکه"],
+    کاسه: ["پیاله", "ملاقه"],
+    لیوان: ["استکان", "فنجان"],
+    فنجان: ["لیوان", "استکان"],
+  }).map(([k, v]) => [unitKey(k), v.map(unitKey)]),
 );
 
 /** Parse a quantity that may be written with Persian/Arabic digits or a Persian decimal separator. */
@@ -90,6 +107,12 @@ export function toGrams(qty: number | string, unit: string, food: Food, units: P
   const foodUnits = units.filter((u) => u.food_id === food.id);
   const match = foodUnits.find((u) => unitKey(u.unit_fa) === key || unitKey(u.unit_en) === key);
   if (match) return { grams: q * match.grams_default, resolution: "default_unit", is_estimated: false };
+
+  // Everyday synonyms («یه تیکه نون» = a برش of bread): use the food's own unit, marked as an estimate.
+  for (const alt of UNIT_SYNONYMS[key] ?? []) {
+    const m = foodUnits.find((u) => unitKey(u.unit_fa) === alt);
+    if (m) return { grams: q * m.grams_default, resolution: "estimated_range", is_estimated: true };
+  }
 
   const fallback = FALLBACK_BY_KEY.get(key);
   if (fallback !== undefined) return { grams: q * fallback, resolution: "estimated_range", is_estimated: true };

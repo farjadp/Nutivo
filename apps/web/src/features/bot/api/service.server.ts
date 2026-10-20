@@ -19,7 +19,12 @@ import { regram } from "@/features/log-meal/model/recalc";
 import { statsComplete } from "@/features/today/model/day";
 import { repeatLabel } from "@/features/today/model/repeats";
 import { loadDayFor } from "@/features/today/api/load-day.server";
+import { readReport, storeReport, writeAnalysis } from "@/features/report/api/report.server";
+import { itemsHash } from "@/features/report/model/hash";
+import { buildDailyReport, reportFacts, type ReportView } from "@nutivo/core";
+import { faDayWord } from "@/shared/lib/format";
 import { logEvent } from "@/lib/server/log";
+import { dayCardSvg, renderPng } from "./card.server";
 import { adminClient } from "@/lib/supabase/admin";
 import type { BotResult, DayView, DraftView, TgUser } from "@nutivo/core";
 
@@ -336,4 +341,35 @@ export async function addRepeat(user: Linked, repeatId: string, nowUtc: string):
   });
   if (!res.ok) return res;
   return { ok: true, data: { entry_id: res.entry_id, label: repeatLabel(r), day: await dayView(user) } };
+}
+
+// ---------------------------------------------------------------------------
+// Card and report
+// ---------------------------------------------------------------------------
+
+/** The «امروز» PNG card plus the numbers behind it. */
+export async function dayCard(user: Linked, date?: string): Promise<{ png: Buffer; day: DayView } | null> {
+  const day = await dayView(user, date);
+  if (!day) return null;
+  return { png: renderPng(dayCardSvg(day)), day };
+}
+
+/**
+ * The day's report. Uses the stored analysis when it matches the day's items; otherwise writes a new one
+ * (only when something was logged, so empty days cost nothing).
+ */
+export async function reportFor(user: Linked, date?: string, opts: { write?: boolean } = {}): Promise<ReportView | null> {
+  const day = await loadDayFor(db(), user.userId, date);
+  if (!day) return null;
+  const report = buildDailyReport({ date: day.date, items: day.items, goals: day.goals });
+  const facts = reportFacts(report, day.goals);
+  let stored = await readReport(db(), user.userId, day.date);
+  const fresh = stored.analysis && stored.source_hash === itemsHash(day.items);
+  if (!fresh && day.items.length && opts.write !== false) {
+    const r = await writeAnalysis(day.items, day.goals, day.date, faDayWord(day.date, day.today));
+    await storeReport(db(), user.userId, day.date, day.items, day.goals, r);
+    void logEvent({ kind: "system", event: "ai.report", actor_id: user.userId, message: `telegram ${day.date}`, meta: { model: r.model, ms: r.ms, ...r.usage, dropped: r.dropped.length, channel: "telegram" } });
+    stored = { analysis: r.analysis, source_hash: itemsHash(day.items), generated_at: new Date().toISOString() };
+  }
+  return { date: day.date, day_label: faDayWord(day.date, day.today), facts, analysis: fresh || day.items.length ? stored.analysis : null };
 }

@@ -10,7 +10,7 @@ const seedIds = readFileSync(resolve(__dirname, "../../../db/seed/foods_fa.csv")
 
 describe("food icons", () => {
   it("every reviewed Persian food has its own specific icon (no fallback)", () => {
-    expect(seedIds.length).toBe(25);
+    expect(seedIds.length).toBe(26);
     for (const id of seedIds) expect(foodIconName({ id }), id).not.toBe("dish");
   });
 

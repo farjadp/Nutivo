@@ -1,4 +1,4 @@
-import type { BotResult, DayView, DraftView, Goals, TgUser } from "@nutivo/core";
+import type { BotResult, DayView, DraftView, Goals, ReportView, TgUser } from "@nutivo/core";
 
 export interface ApiConfig {
   baseUrl: string;
@@ -48,6 +48,8 @@ export function createApi(cfg: ApiConfig) {
     draftCancel: (u: TgUser, c: number, id: string) => call<{ cancelled: true }>("draft_cancel", u, c, { id }),
     undo: (u: TgUser, c: number, entry_id: string) => call<{ undone: true }>("undo", u, c, { entry_id }),
     today: (u: TgUser, c: number, date?: string) => call<DayView>("today", u, c, date ? { date } : {}),
+    todayCard: (u: TgUser, c: number, date?: string) => call<{ png_base64: string; day: DayView }>("today_card", u, c, date ? { date } : {}),
+    report: (u: TgUser, c: number, date?: string) => call<ReportView>("report", u, c, date ? { date } : {}),
     repeat: (u: TgUser, c: number, id: string, now: string) => call<{ entry_id: string; label: string; day: DayView | null }>("repeat", u, c, { id, now }),
   };
 }

@@ -484,6 +484,7 @@ const BY_ID: Record<string, FoodIconName> = {
   "fa:salad-shirazi": "salad",
   "fa:mast": "yogurt",
   "fa:dugh": "doogh",
+  "fa:chay": "tea",
   "fa:panir-feta": "cheese",
   "fa:tokhm-morgh": "egg",
   "fa:kareh": "butter",

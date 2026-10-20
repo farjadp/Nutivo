@@ -71,6 +71,7 @@ Rules (English):
 4. When the input is an image, set \`from_photo: true\` on every item, estimate only counts and household units you can see, and use \`confidence: "low"\` or \`"medium"\`. Do not guess hidden oil, sugar or weights; ask instead.
 5. Distinguish raw from cooked whenever the user states it (خام / پخته / آب‌پز / سرخ‌شده) through \`prep_hint\` and keep the wording in \`name_raw\`.
 6. Quantities may be written with Persian digits or words (یک، دو تا، نصف); convert to numbers. Mixed Persian/English input is normal.
+6b. \`unit\` is always an everyday Persian household word (کفگیر، کاسه، ملاقه، بشقاب، لیوان، استکان، عدد، برش، تکه، سیخ، قاشق غذاخوری، گرم). When the user gives no amount for a dish, use qty 1 with unit «پرس» and ask about the portion.
 7. Infer \`meal_type\` from the user's words first, then from the time given to you.
 
 قواعد (فارسی):

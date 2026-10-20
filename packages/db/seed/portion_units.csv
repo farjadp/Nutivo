@@ -58,3 +58,6 @@ fa:khorma,عدد مضافتی,one date (mazafati),10,7,14,فرض: خرمای م�
 fa:gerdu,عدد,one whole kernel,4,3,6,USDA: 1 oz ≈ 14 halves → ≈ 4 g per whole kernel
 fa:gerdu,مشت,handful,30,25,40,
 fa:gerdu,قاشق غذاخوری,tablespoon (chopped),7,6,9,
+fa:chay,استکان,tea glass (estekan),100,80,120,
+fa:chay,لیوان,glass/mug,240,200,330,
+fa:chay,فنجان,cup,150,120,200,
