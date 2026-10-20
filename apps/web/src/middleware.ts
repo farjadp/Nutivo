@@ -19,8 +19,20 @@ export async function middleware(request: NextRequest) {
       },
     },
   );
-  // Refreshes the auth token; route protection is added with the auth pages.
-  await supabase.auth.getUser();
+  const { data } = await supabase.auth.getUser();
+  const path = request.nextUrl.pathname;
+  const isPublic = path.startsWith("/login") || path.startsWith("/auth") || path.startsWith("/api/cron") || (process.env.NODE_ENV !== "production" && path.startsWith("/dev"));
+  if (!data.user && !isPublic) {
+    const to = request.nextUrl.clone();
+    to.pathname = "/login";
+    to.search = "";
+    return NextResponse.redirect(to);
+  }
+  if (data.user && path.startsWith("/login")) {
+    const to = request.nextUrl.clone();
+    to.pathname = "/today";
+    return NextResponse.redirect(to);
+  }
   return response;
 }
 

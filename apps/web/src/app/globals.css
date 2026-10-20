@@ -76,6 +76,7 @@
   --animate-pop: pop 420ms var(--ease-out-expo) both;
   --animate-rise: rise 360ms var(--ease-out-expo) both;
   --animate-glow: glow 1200ms var(--ease-out-expo) both;
+  --animate-sheet: sheet 380ms var(--ease-out-expo) both;
 }
 
 @keyframes pop {
@@ -85,6 +86,14 @@
 @keyframes rise {
   from { transform: translateY(6px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+@keyframes sheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 @keyframes glow {
   0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 45%, transparent); }

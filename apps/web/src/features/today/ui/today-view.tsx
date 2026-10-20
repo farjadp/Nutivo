@@ -1,6 +1,11 @@
 "use client";
 import { dayTotals, streakStatus, type MealType } from "@nutivo/core";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { confirmMealAction, discardDraftPhotoAction, draftMealAction } from "@/features/log-meal/api/actions";
+import type { Draft, DraftItem } from "@/features/log-meal/model/draft";
+import { localISO, preparePhoto } from "@/features/log-meal/model/photo";
+import { ConfirmSheet } from "@/features/log-meal/ui/confirm-sheet";
 import { SAMPLE_QUICK_MEALS, type LoggedItem, type QuickMeal } from "@/entities/day/sample";
 import { faDayLabel, faInt } from "@/shared/lib/format";
 import { completeDay, estimatedMacros, groupMeals } from "../model/day";
@@ -18,6 +23,7 @@ interface Props {
   goals: { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
   pastLogDates: string[];
   isSample: boolean;
+  quickMeals?: QuickMeal[];
 }
 
 function insightFor(remainingKcal: number, remainingProtein: number, proteinPct: number) {
@@ -39,8 +45,15 @@ function insightFor(remainingKcal: number, remainingProtein: number, proteinPct:
   };
 }
 
-export function TodayView({ today, initialItems, goals, pastLogDates, isSample }: Props) {
-  const [items, setItems] = useState(initialItems);
+export function TodayView({ today, initialItems, goals, pastLogDates, isSample, quickMeals = SAMPLE_QUICK_MEALS }: Props) {
+  const router = useRouter();
+  const [localItems, setItems] = useState(initialItems);
+  const items = isSample ? localItems : initialItems;
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [saving, startSaving] = useTransition();
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [prevCount, setPrevCount] = useState(initialItems.length);
   const [usedQuick, setUsedQuick] = useState<Set<string>>(new Set());
   const [fresh, setFresh] = useState<Set<string>>(new Set());
   const [pulse, setPulse] = useState(0);
@@ -70,10 +83,84 @@ export function TodayView({ today, initialItems, goals, pastLogDates, isSample }
     setNotice(`${q.label} ثبت شد.`);
   }
 
+  // Live mode: replay the glow when the server sends back more items after a save.
+  if (!isSample && initialItems.length !== prevCount) {
+    setPrevCount(initialItems.length);
+    if (initialItems.length > prevCount) {
+      setFresh(new Set(initialItems.slice(prevCount).map((i) => i.key)));
+      setPulse((p) => p + 1);
+    }
+  }
+
+  async function requestDraft(form: FormData) {
+    if (isSample) {
+      setNotice("در حالت نمونه، ثبت واقعی خاموش است. وارد حساب شو.");
+      return;
+    }
+    setBusy(true);
+    form.set("now", localISO());
+    const res = await draftMealAction(form);
+    setBusy(false);
+    if (res.ok) {
+      setSaveError(null);
+      setDraft(res.data);
+    } else setNotice(res.error);
+  }
+
+  function onText(text: string) {
+    const f = new FormData();
+    f.set("text", text);
+    void requestDraft(f);
+  }
+
+  async function onPhoto(file: File, caption: string) {
+    const f = new FormData();
+    f.set("photo", await preparePhoto(file));
+    if (caption) f.set("text", caption);
+    void requestDraft(f);
+  }
+
+  function cancelDraft() {
+    if (draft?.photo_path) void discardDraftPhotoAction(draft.photo_path);
+    setDraft(null);
+  }
+
+  function confirmDraft(meal_type: MealType, list: DraftItem[]) {
+    if (!draft) return;
+    startSaving(async () => {
+      const res = await confirmMealAction({
+        meal_type,
+        raw_input: draft.raw_input,
+        input_channel: draft.input_channel,
+        photo_path: draft.photo_path,
+        eaten_at: draft.eaten_at,
+        items: list.map((i) => ({
+          food_id: i.food_id!,
+          name_raw: i.name_raw,
+          qty: i.qty,
+          unit: i.unit,
+          grams: i.grams!,
+          is_estimated: i.is_estimated,
+          confidence: i.confidence,
+        })),
+      });
+      if (!res.ok) {
+        setSaveError(res.error);
+        return;
+      }
+      setDraft(null);
+      setNotice("ثبت شد.");
+      router.refresh();
+    });
+  }
+
   function addToMeal(m: MealType) {
-    const q = SAMPLE_QUICK_MEALS.find((x) => x.meal_type === m && !usedQuick.has(x.id));
-    if (q) addQuick(q);
-    else setNotice("برای این وعده بنویس یا عکس بگیر.");
+    const q = quickMeals.find((x) => x.meal_type === m && !usedQuick.has(x.id));
+    if (q && isSample) addQuick(q);
+    else {
+      setNotice("بنویس چی خوردی یا عکس بگیر.");
+      document.getElementById("log-text")?.focus();
+    }
   }
 
   return (
@@ -109,6 +196,8 @@ export function TodayView({ today, initialItems, goals, pastLogDates, isSample }
         </div>
       </main>
 
+      {draft && <ConfirmSheet draft={draft} saving={saving} error={saveError} onCancel={cancelDraft} onConfirm={confirmDraft} />}
+
       <div className="fixed inset-x-0 bottom-0 z-10">
         <div className="mx-auto max-w-md border-t border-line/60 bg-ground/95 px-4 pt-2.5 pb-3 backdrop-blur-sm sm:rounded-t-[var(--radius-card)] sm:border-x">
           {notice && (
@@ -116,7 +205,14 @@ export function TodayView({ today, initialItems, goals, pastLogDates, isSample }
               {notice}
             </p>
           )}
-          <Composer quickMeals={SAMPLE_QUICK_MEALS} usedQuick={usedQuick} onQuick={addQuick} onNotice={setNotice} />
+          <Composer
+            quickMeals={isSample ? quickMeals : []}
+            usedQuick={usedQuick}
+            busy={busy}
+            onQuick={addQuick}
+            onText={onText}
+            onPhoto={(f, c) => void onPhoto(f, c)}
+          />
         </div>
         <div className="pb-[env(safe-area-inset-bottom)] bg-surface">
           <BottomNav active="/today" />
