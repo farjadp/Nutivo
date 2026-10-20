@@ -5,7 +5,7 @@ import { FoodIconTile } from "@/shared/ui/food-icon";
 import type { LoggedItem } from "@/entities/day/sample";
 import type { MealGroup } from "../model/day";
 
-const MEAL_LABEL: Record<MealType, string> = { breakfast: "صبحانه", lunch: "ناهار", snack: "میان‌وعده", dinner: "شام" };
+export const MEAL_LABEL: Record<MealType, string> = { breakfast: "صبحانه", lunch: "ناهار", snack: "میان‌وعده", dinner: "شام" };
 
 interface Props {
   groups: MealGroup[];

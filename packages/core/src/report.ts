@@ -156,3 +156,75 @@ export function streakStatus({ logDates, today, graceDaysPerWeek = 1 }: StreakIn
 
   return { current, longest: Math.max(longest, current), forgiven_today };
 }
+
+// ---------------------------------------------------------------------------
+// Report facts: the deterministic answers to the nightly report's questions.
+// Everything the analysis text may cite comes from here.
+// ---------------------------------------------------------------------------
+
+export type KcalStatus = "under" | "in_range" | "over";
+
+export interface MacroFact {
+  consumed: number;
+  goal: number;
+  /** consumed − goal (negative = still missing). */
+  diff: number;
+  pct: number;
+}
+
+export interface ReportFacts {
+  date: string;
+  logged: boolean;
+  is_partial: boolean;
+  kcal: MacroFact & { low: number; high: number; status: KcalStatus };
+  protein: MacroFact & { enough: boolean };
+  carbs: MacroFact & { balanced: boolean };
+  fat: MacroFact & { balanced: boolean };
+  /** Share of energy from each macro (0–1), from 4/4/9 kcal per gram. */
+  energy_split: { protein: number; carbs: number; fat: number };
+  heaviest_meal: { meal_type: MealType; kcal: number; share: number } | null;
+  top_kcal: { name: string; kcal: number }[];
+  top_fat: { name: string; fat_g: number }[];
+  /** Stored kcal differ from macro energy by more than 8% (rounding or uncertain data). */
+  kcal_mismatch: { reported: number; from_macros: number; delta_pct: number } | null;
+}
+
+/** Calorie band considered "in range": ±10% of the goal. */
+export const KCAL_BAND = 0.1;
+
+const r0 = (n: number) => Math.round(n);
+const r1 = (n: number) => Math.round(n * 10) / 10;
+
+function fact(consumed: number, goal: number): MacroFact {
+  return { consumed: r1(consumed), goal, diff: r1(consumed - goal), pct: goal > 0 ? consumed / goal : 0 };
+}
+
+export function reportFacts(report: DailyReport, goals: Goals): ReportFacts {
+  const m = report.totals.macros;
+  const low = r0(goals.kcal * (1 - KCAL_BAND));
+  const high = r0(goals.kcal * (1 + KCAL_BAND));
+  const status: KcalStatus = m.kcal < low ? "under" : m.kcal > high ? "over" : "in_range";
+  const energy = 4 * m.protein_g + 4 * m.carbs_g + 9 * m.fat_g;
+  const heaviest = report.per_meal.find((p) => p.meal_type === report.heaviest_meal);
+  const name = (i: ReportItem) => i.food.name_fa;
+  const mismatch = Math.abs(report.discrepancy.delta_pct) > 0.08 && m.kcal > 0;
+
+  return {
+    date: report.date,
+    logged: report.per_meal.length > 0,
+    is_partial: report.is_partial,
+    kcal: { ...fact(r0(m.kcal), goals.kcal), consumed: r0(m.kcal), diff: r0(m.kcal - goals.kcal), low, high, status },
+    protein: { ...fact(m.protein_g, goals.protein_g), enough: m.protein_g >= goals.protein_g * 0.9 },
+    // "Balanced" against the user's own targets: within ±15% of the gram goal.
+    carbs: { ...fact(m.carbs_g, goals.carbs_g), balanced: Math.abs(m.carbs_g - goals.carbs_g) <= goals.carbs_g * 0.15 },
+    fat: { ...fact(m.fat_g, goals.fat_g), balanced: Math.abs(m.fat_g - goals.fat_g) <= goals.fat_g * 0.15 },
+    energy_split:
+      energy > 0
+        ? { protein: (4 * m.protein_g) / energy, carbs: (4 * m.carbs_g) / energy, fat: (9 * m.fat_g) / energy }
+        : { protein: 0, carbs: 0, fat: 0 },
+    heaviest_meal: heaviest ? { meal_type: heaviest.meal_type, kcal: r0(heaviest.macros.kcal), share: m.kcal > 0 ? heaviest.macros.kcal / m.kcal : 0 } : null,
+    top_kcal: report.top_kcal_sources.filter((i) => i.macros.kcal > 0).map((i) => ({ name: name(i), kcal: r0(i.macros.kcal) })),
+    top_fat: report.top_fat_sources.filter((i) => i.macros.fat_g >= 1).map((i) => ({ name: name(i), fat_g: r1(i.macros.fat_g) })),
+    kcal_mismatch: mismatch ? { reported: r0(m.kcal), from_macros: r0(report.discrepancy.expected), delta_pct: report.discrepancy.delta_pct } : null,
+  };
+}

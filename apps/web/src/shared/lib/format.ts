@@ -42,3 +42,22 @@ export function faAgo(iso: string | null | undefined, now = Date.now()): string 
   if (abs < 86400 * 30) return rtf.format(Math.round(s / 86400), "day");
   return dtFmt.format(new Date(iso));
 }
+
+const fullFmt = new Intl.DateTimeFormat("fa-IR-u-ca-gregory", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+/** «سه‌شنبه ۲۰ اکتبر ۲۰۲۶» */
+export function faFullDate(isoDate: string): string {
+  return fullFmt.format(new Date(`${isoDate}T12:00:00`));
+}
+
+/** 0.234 → «۲۳٪» */
+export function faPct(ratio: number): string {
+  return `${faInt(ratio * 100)}٪`;
+}
+
+/** «امروز» / «دیروز» / weekday name, for referring to a day in prose. */
+export function faDayWord(date: string, today: string): string {
+  if (date === today) return "امروز";
+  if (date === addDays(today, -1)) return "دیروز";
+  return new Intl.DateTimeFormat("fa-IR-u-ca-gregory", { weekday: "long" }).format(new Date(`${date}T12:00:00`));
+}

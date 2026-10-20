@@ -12,7 +12,7 @@ export function localDate(at: Date | string, timeZone: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(at));
 }
 
-interface EntryRow {
+export interface EntryRow {
   id: string;
   eaten_at: string;
   meal_type: MealType;
@@ -35,6 +35,32 @@ interface EntryRow {
 }
 
 /** Loads one day (default today) plus per-day totals for the day strip. `requested` is clamped to the strip window. */
+export const ENTRY_SELECT =
+  "id, eaten_at, meal_type, input_channel, entry_items(id, name_raw, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, is_estimated, confidence, position, foods(*))";
+
+/** Saved items of one entry, in their original order, with the macros frozen at save time. */
+export function entryItems(e: EntryRow): LoggedItem[] {
+  return [...e.entry_items]
+    .sort((a, b) => a.position - b.position)
+    .filter((it) => it.foods)
+    .map((it) => ({
+      key: it.id,
+      meal_type: e.meal_type,
+      name_raw: it.name_raw,
+      qty: Number(it.qty),
+      unit: it.unit,
+      prep_hint: undefined,
+      confidence: it.confidence ?? "medium",
+      needs_question: undefined,
+      from_photo: e.input_channel === "web_photo",
+      food: foodFromRow(it.foods),
+      grams: Number(it.grams),
+      macros: { kcal: Number(it.kcal), protein_g: Number(it.protein_g), carbs_g: Number(it.carbs_g), fat_g: Number(it.fat_g) },
+      is_estimated: it.is_estimated,
+      resolution: it.is_estimated ? "estimated_range" : "default_unit",
+    }));
+}
+
 export async function loadDay(requested?: string) {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -54,7 +80,7 @@ export async function loadDay(requested?: string) {
 
   const { data, error } = await supabase
     .from("meal_entries")
-    .select("id, eaten_at, meal_type, input_channel, entry_items(id, name_raw, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, is_estimated, confidence, position, foods(*))")
+    .select(ENTRY_SELECT)
     .eq("status", "confirmed")
     .gte("eaten_at", since)
     .order("eaten_at", { ascending: true });
@@ -77,25 +103,7 @@ export async function loadDay(requested?: string) {
     (mealsByDay[d] ??= new Set()).add(e.meal_type);
     s.meals = mealsByDay[d]!.size;
     if (d !== date) continue;
-    for (const it of [...e.entry_items].sort((a, b) => a.position - b.position)) {
-      if (!it.foods) continue;
-      items.push({
-        key: it.id,
-        meal_type: e.meal_type,
-        name_raw: it.name_raw,
-        qty: Number(it.qty),
-        unit: it.unit,
-        prep_hint: undefined,
-        confidence: it.confidence ?? "medium",
-        needs_question: undefined,
-        from_photo: e.input_channel === "web_photo",
-        food: foodFromRow(it.foods),
-        grams: Number(it.grams),
-        macros: { kcal: Number(it.kcal), protein_g: Number(it.protein_g), carbs_g: Number(it.carbs_g), fat_g: Number(it.fat_g) },
-        is_estimated: it.is_estimated,
-        resolution: it.is_estimated ? "estimated_range" : "default_unit",
-      });
-    }
+    items.push(...entryItems(e));
   }
 
   const goals: Goals = {
@@ -105,5 +113,5 @@ export async function loadDay(requested?: string) {
     fat_g: Number(profile.goal_fat_g),
   };
 
-  return { today, date, items, goals, pastLogDates: [...pastDates].sort(), stats };
+  return { userId: auth.user.id, timezone: tz, today, date, items, goals, pastLogDates: [...pastDates].sort(), stats };
 }
