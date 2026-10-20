@@ -3,7 +3,8 @@
  * نوتی — Nutivo's mascot. Hand-drawn SVG on a 120 grid so every mood shares one face.
  * Motion lives in globals.css (nuti-*): ease-in-out / ease-out only, no overshoot (no bounce).
  */
-export type NutiMood = "happy" | "wink" | "wow" | "chew" | "think" | "cheer" | "sleepy";
+import type { NutiMood } from "@nutivo/core";
+export type { NutiMood };
 
 const INK = "#20252B";
 const SKIN = "#F6D3B8";
