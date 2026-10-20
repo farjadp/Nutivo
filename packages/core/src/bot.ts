@@ -109,3 +109,29 @@ export function reportText(v: ReportView): string {
   }
   return lines.join("\n");
 }
+
+// ---------------------------------------------------------------------------
+// Mobile app (apps/web/src/app/api/app ↔ apps/mobile)
+// ---------------------------------------------------------------------------
+
+/** One saved item as the app's day view and edit sheet need it. Numbers are the ones frozen at save time. */
+export interface AppItem {
+  id: string;
+  meal_type: MealType;
+  name: string;
+  said: string;
+  food_id: string;
+  qty: number;
+  unit: string;
+  grams: number;
+  kcal: number;
+  protein_g: number;
+  estimated: boolean;
+}
+
+export interface AppDay {
+  day: DayView;
+  items: AppItem[];
+  /** Oldest to today, for the day strip. */
+  strip: { date: string; logged: boolean; complete: boolean }[];
+}

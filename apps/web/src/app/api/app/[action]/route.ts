@@ -13,6 +13,7 @@ import {
   type Linked,
 } from "@/features/bot/api/service.server";
 import type { BotResult } from "@nutivo/core";
+import { dayDetail, deleteItem, foodUnits, updateItem } from "@/features/mobile/api/day.server";
 import { logEvent } from "@/lib/server/log";
 import { adminClient, isAdminConfigured } from "@/lib/supabase/admin";
 
@@ -53,12 +54,19 @@ const Bodies = {
   draft_cancel: Id,
   undo: z.object({ entry_id: z.string().uuid() }),
   today: Day,
+  day: Day,
+  item_update: z.object({
+    id: z.string().uuid(),
+    change: z.union([z.object({ qty: z.number().positive().max(10000), unit: z.string().min(1).max(40) }), z.object({ grams: z.number().positive().max(5000) })]),
+  }),
+  item_delete: Id,
+  units: z.object({ food_id: z.string().min(1).max(80) }),
   repeat: z.object({ id: z.string().max(400), now: Iso }),
   report: Day,
 } as const;
 type Action = keyof typeof Bodies;
 
-const NEEDS_GOALS = new Set<Action>(["draft", "draft_edit", "draft_confirm", "today", "repeat", "report"]);
+const NEEDS_GOALS = new Set<Action>(["draft", "draft_edit", "draft_confirm", "today", "day", "repeat", "report", "item_update", "item_delete"]);
 
 interface AppUser extends Linked {
   email: string | null;
@@ -122,6 +130,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
         const day = await dayView(user, (parsed.data as z.infer<typeof Day>).date);
         return json(day ? { ok: true, data: day } : noGoals);
       }
+      case "day": {
+        const d = await dayDetail(user, (parsed.data as z.infer<typeof Day>).date);
+        return json(d ? { ok: true, data: d } : noGoals);
+      }
+      case "item_update": {
+        const b = parsed.data as z.infer<(typeof Bodies)["item_update"]>;
+        return json(await updateItem(user, b.id, b.change));
+      }
+      case "item_delete":
+        return json(await deleteItem(user, (parsed.data as z.infer<typeof Id>).id));
+      case "units":
+        return json({ ok: true, data: await foodUnits((parsed.data as z.infer<(typeof Bodies)["units"]>).food_id) });
       case "repeat": {
         const b = parsed.data as z.infer<(typeof Bodies)["repeat"]>;
         return json(await addRepeat(user, b.id, b.now));
