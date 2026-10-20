@@ -26,6 +26,7 @@ export const metadata: Metadata = {
   title: "Nutivo",
   description: "دستیار تغذیه‌ای که می‌داند چه خورده‌ای و کمک می‌کند انتخاب بعدی بهتری داشته باشی.",
   applicationName: "Nutivo",
+  appleWebApp: { capable: true, title: "Nutivo", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

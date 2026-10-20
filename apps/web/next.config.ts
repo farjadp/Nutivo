@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   // Native PNG renderer for the Telegram card: load from node_modules, do not bundle.
   serverExternalPackages: ["@resvg/resvg-js"],
   // Fonts read from disk by the card renderer must ship with the server functions.
-  outputFileTracingIncludes: { "/api/bot/**": ["./assets/fonts/**"], "/api/cron/**": ["./assets/fonts/**"] },
+  outputFileTracingIncludes: { "/api/bot/**": ["./assets/**"], "/api/cron/**": ["./assets/**"] },
 };
 
 export default nextConfig;

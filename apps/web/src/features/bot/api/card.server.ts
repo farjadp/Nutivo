@@ -1,4 +1,5 @@
 import "server-only";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 import { toPersianDigits, type DayView, type MealType } from "@nutivo/core";
@@ -89,8 +90,9 @@ export function dayCardSvg(day: DayView, opts: { name?: string } = {}): string {
   const pills: string[] = [];
   let px = 960;
   const pill = (label: string, bg: string, fg: string) => {
-    const w = 26 + label.length * 19;
-    pills.push(`<rect x="${px - w}" y="${H - 118}" width="${w}" height="56" rx="28" fill="${bg}"/>${t(px - 22, H - 80, label, 28, { weight: 700, fill: fg })}`);
+    // Width is estimated from the character count; centring the text keeps it balanced either way.
+    const w = 48 + label.length * 15;
+    pills.push(`<rect x="${px - w}" y="${H - 118}" width="${w}" height="56" rx="28" fill="${bg}"/>${t(px - w / 2, H - 80, label, 28, { weight: 700, fill: fg, anchor: "middle" })}`);
     px -= w + 16;
   };
   if (day.streak > 1) pill(`${toPersianDigits(String(day.streak))} روز پشت‌سرهم`, C.mint, C.greenInk);
@@ -112,9 +114,17 @@ export function dayCardSvg(day: DayView, opts: { name?: string } = {}): string {
   <rect x="120" y="1100" width="840" height="2" fill="${C.line}"/>
   ${meals.length ? meals.join("") : t(540, 1200, "هنوز چیزی ثبت نشده", 32, { fill: C.ink2, anchor: "middle" })}
   ${pills.join("")}
-  <text x="80" y="${H - 72}" font-family="${FONT}" font-size="34" font-weight="900" fill="${C.greenInk}" text-anchor="start">Nutivo</text>
+  ${logo(76, H - 112, 80)}
   ${opts.name ? t(80 + 160, H - 72, "", 1) : ""}
 </svg>`;
+}
+
+/** The brand lockup (icon + wordmark) placed at x,y with the given height. */
+let lockup: string | null = null;
+function logo(x: number, y: number, height: number): string {
+  lockup ??= readFileSync(path.join(process.cwd(), "assets/brand/nutivo-lockup.svg"), "utf8");
+  const [, , w, h] = /viewBox="([^"]+)"/.exec(lockup)![1]!.split(" ").map(Number) as [number, number, number, number];
+  return lockup.replace("<svg ", `<svg x="${x}" y="${y}" width="${((height * w) / h).toFixed(1)}" height="${height}" `);
 }
 
 const fontDir = path.join(process.cwd(), "assets/fonts");

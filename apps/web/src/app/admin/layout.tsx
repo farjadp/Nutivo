@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react";
+import { Logo } from "@/shared/ui/logo";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { requireAdmin } from "@/features/admin/api/guard.server";
@@ -13,8 +14,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     <div className="min-h-dvh lg:grid lg:grid-cols-[232px_1fr]">
       <aside className="border-b border-line bg-surface px-3 py-3 lg:sticky lg:top-0 lg:h-dvh lg:border-b-0 lg:border-l lg:px-4 lg:py-6">
         <div className="mb-3 flex items-center justify-between gap-2 px-1 lg:mb-6 lg:block">
-          <p className="flex items-baseline gap-2">
-            <span className="font-[family-name:var(--font-en)] text-lg font-bold tracking-tight text-green-ink" dir="ltr">Nutivo</span>
+          <p className="flex items-center gap-2">
+            <Logo className="h-12" />
             <span className="text-xs text-ink-2">ادمین</span>
           </p>
           <Link href="/today" className="flex items-center gap-1 text-xs text-ink-2 hover:text-ink lg:mt-1">

@@ -1,0 +1,66 @@
+/**
+ * Builds every logo asset the app uses from the two master SVGs in docs/brand/vector/.
+ * Run after replacing those masters with the designer's originals:
+ *   pnpm --filter @nutivo/web exec node scripts/build-brand-assets.mjs
+ */
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { Resvg } from "@resvg/resvg-js";
+
+const root = path.resolve(import.meta.dirname, "../../..");
+const icon = readFileSync(path.join(root, "docs/brand/vector/nutivo-icon.svg"), "utf8");
+const lockup = readFileSync(path.join(root, "docs/brand/vector/nutivo-lockup.svg"), "utf8");
+const DEEP_GREEN = "#007F71";
+const MINT = "#EAF8F5";
+
+const white = (svg) => svg.replace(/fill="#[0-9A-Fa-f]{6}"/g, 'fill="#FFFFFF"');
+const viewBox = (svg) => /viewBox="([^"]+)"/.exec(svg)[1].split(" ").map(Number);
+const inner = (svg) => svg.replace(/^<svg[^>]*>/, "").replace(/<\/svg>$/, "");
+
+/** The icon centred on a square tile (app icons, Telegram avatar). `pad` = share of the tile left as margin. */
+function tile(size, { bg, fg = "color", pad = 0.22 }) {
+  const [x, y, w, h] = viewBox(icon);
+  const box = size * (1 - 2 * pad);
+  const k = box / Math.max(w, h);
+  const tx = (size - w * k) / 2 - x * k;
+  const ty = (size - h * k) / 2 - y * k;
+  const body = inner(fg === "white" ? white(icon) : icon);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><rect width="${size}" height="${size}" fill="${bg}"/><g transform="translate(${tx.toFixed(2)} ${ty.toFixed(2)}) scale(${k.toFixed(4)})">${body}</g></svg>`;
+}
+
+const png = (svg, file, width) => {
+  const r = new Resvg(svg, width ? { fitTo: { mode: "width", value: width } } : undefined);
+  writeFileSync(file, r.render().asPng());
+};
+
+const pub = path.join(root, "apps/web/public");
+const app = path.join(root, "apps/web/src/app");
+mkdirSync(path.join(pub, "brand"), { recursive: true });
+mkdirSync(path.join(pub, "icons"), { recursive: true });
+
+// SVGs for the UI
+writeFileSync(path.join(pub, "brand/nutivo-icon.svg"), icon);
+writeFileSync(path.join(pub, "brand/nutivo-icon-white.svg"), white(icon));
+writeFileSync(path.join(pub, "brand/nutivo-lockup.svg"), lockup);
+writeFileSync(path.join(pub, "brand/nutivo-lockup-white.svg"), white(lockup));
+
+// Server-side renderers (the Telegram day card) read these from disk
+mkdirSync(path.join(root, "apps/web/assets/brand"), { recursive: true });
+writeFileSync(path.join(root, "apps/web/assets/brand/nutivo-lockup.svg"), lockup);
+
+// Browser tab: the two-colour icon on a transparent square
+const [x, y, w, h] = viewBox(icon);
+const side = Math.max(w, h);
+writeFileSync(path.join(app, "icon.svg"), icon.replace(/viewBox="[^"]+"/, `viewBox="${(x - (side - w) / 2).toFixed(1)} ${(y - (side - h) / 2).toFixed(1)} ${side.toFixed(1)} ${side.toFixed(1)}"`));
+
+// iOS home screen and PWA: white icon on Deep Green, as on the brand board
+png(tile(180, { bg: DEEP_GREEN, fg: "white" }), path.join(app, "apple-icon.png"));
+png(tile(192, { bg: DEEP_GREEN, fg: "white" }), path.join(pub, "icons/icon-192.png"));
+png(tile(512, { bg: DEEP_GREEN, fg: "white" }), path.join(pub, "icons/icon-512.png"));
+// Maskable: Android crops to a circle, so keep the icon inside the safe zone
+png(tile(512, { bg: DEEP_GREEN, fg: "white", pad: 0.28 }), path.join(pub, "icons/icon-maskable-512.png"));
+
+// Telegram bot profile photo (upload in BotFather → /setuserpic) and a light variant
+png(tile(640, { bg: DEEP_GREEN, fg: "white", pad: 0.24 }), path.join(root, "docs/brand/telegram-avatar.png"));
+png(tile(640, { bg: MINT, pad: 0.24 }), path.join(root, "docs/brand/telegram-avatar-light.png"));
+console.log("brand assets written");
