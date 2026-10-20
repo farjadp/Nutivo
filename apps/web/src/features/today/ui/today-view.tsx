@@ -1,11 +1,13 @@
 "use client";
 import { dayTotals, macrosForGrams, streakStatus, type Goals, type MealType } from "@nutivo/core";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { confirmMealAction, discardDraftPhotoAction, draftMealAction } from "@/features/log-meal/api/actions";
 import type { Draft, DraftItem } from "@/features/log-meal/model/draft";
 import { localISO, preparePhoto } from "@/features/log-meal/model/photo";
 import { ConfirmSheet } from "@/features/log-meal/ui/confirm-sheet";
+import { deleteEntryItemAction, updateEntryItemAction } from "@/features/edit-meal/api/actions";
+import { EditItemSheet, type ItemEdit } from "@/features/edit-meal/ui/edit-item-sheet";
 import { SAMPLE_QUICK_MEALS, type LoggedItem, type QuickMeal } from "@/entities/day/sample";
 import { sampleDraft } from "@/entities/day/sample-draft";
 import { browserToday, clearLocalDay, isLocalSeeded, loadLocalDay, saveLocalDay, seedLocalSample } from "@/features/local-store/day-store";
@@ -65,7 +67,11 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
   const isLocal = mode === "local";
   const router = useRouter();
   const [localItems, setItems] = useState(initialItems);
-  const items = mode === "live" ? initialItems : localItems;
+  // Deleted items stay hidden for a few seconds (undo window) before the delete is committed.
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [leaving, setLeaving] = useState<Set<string>>(new Set());
+  const allItems = mode === "live" ? initialItems : localItems;
+  const items = useMemo(() => (hidden.size ? allItems.filter((i) => !hidden.has(i.key)) : allItems), [allItems, hidden]);
   const [today, setToday] = useState(todayProp);
   const [goals, setGoals] = useState<Goals>(goalsProp);
   const [pastLogDates, setPast] = useState(pastProp);
@@ -89,7 +95,12 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
   const [usedQuick, setUsedQuick] = useState<Set<string>>(new Set());
   const [fresh, setFresh] = useState<Set<string>>(new Set());
   const [pulse, setPulse] = useState(0);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ id: number; text: string; action?: { label: string; run: () => void } } | null>(null);
+  const setNotice = useCallback((text: string | null, action?: { label: string; run: () => void }) => setToast(text ? { id: Date.now(), text, action } : null), []);
+  const [editing, setEditing] = useState<LoggedItem | null>(null);
+  const [editSaving, startEditSaving] = useTransition();
+  const [editError, setEditError] = useState<string | null>(null);
+  const pendingDeletes = useRef(new Map<string, { timer: number; commit: () => void }>());
   const [nutiOn] = useNutiEnabled();
   const [lastEvent, setLastEvent] = useState<{ kind: "logged" | "photo"; n: number } | null>(null);
   const [celebrate, setCelebrate] = useState(false);
@@ -101,10 +112,27 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
   }, [lastEvent]);
 
   useEffect(() => {
-    if (!notice) return;
-    const t = window.setTimeout(() => setNotice(null), 3200);
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), toast.action ? 6000 : 3200);
     return () => window.clearTimeout(t);
-  }, [notice]);
+  }, [toast]);
+
+  // Commit pending deletes if the page is closed or left during the undo window.
+  useEffect(() => {
+    const pending = pendingDeletes.current;
+    const flush = () => {
+      for (const [, p] of pending) {
+        window.clearTimeout(p.timer);
+        p.commit();
+      }
+      pending.clear();
+    };
+    window.addEventListener("pagehide", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      flush();
+    };
+  }, []);
 
   const totals = useMemo(() => dayTotals(items, goals), [items, goals]);
   const est = useMemo(() => estimatedMacros(items), [items]);
@@ -300,6 +328,104 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
     });
   }
 
+  function saveEdit(edit: ItemEdit) {
+    const it = editing;
+    if (!it) return;
+    setEditError(null);
+    if (mode !== "live") {
+      const updated: LoggedItem = {
+        ...it,
+        food: edit.food,
+        qty: edit.qty,
+        unit: edit.unit,
+        grams: edit.grams,
+        is_estimated: edit.is_estimated,
+        macros: macrosForGrams(edit.food, edit.grams),
+        resolution: edit.unit === "گرم" ? "exact" : it.resolution,
+      };
+      setItems((prev) => {
+        const next = prev.map((x) => (x.key === it.key ? updated : x));
+        if (isLocal) saveLocalDay(today, next);
+        return next;
+      });
+      setFresh(new Set([it.key]));
+      setPulse((p) => p + 1);
+      setEditing(null);
+      setNotice("تغییر ذخیره شد.");
+      return;
+    }
+    startEditSaving(async () => {
+      const res = await updateEntryItemAction({ item_id: it.key, food_id: edit.food.id, qty: edit.qty, unit: edit.unit, grams: edit.grams, is_estimated: edit.is_estimated });
+      if (!res.ok) {
+        setEditError(res.error);
+        return;
+      }
+      setEditing(null);
+      setFresh(new Set([it.key]));
+      setPulse((p) => p + 1);
+      setNotice("تغییر ذخیره شد.");
+      router.refresh();
+    });
+  }
+
+  function deleteItem(it: LoggedItem) {
+    setEditing(null);
+    setEditError(null);
+    setLeaving((prev) => new Set(prev).add(it.key));
+    window.setTimeout(() => {
+      setLeaving((prev) => {
+        const n = new Set(prev);
+        n.delete(it.key);
+        return n;
+      });
+      setHidden((prev) => new Set(prev).add(it.key));
+      setPulse((p) => p + 1);
+    }, 260);
+
+    const unhide = () =>
+      setHidden((prev) => {
+        const n = new Set(prev);
+        n.delete(it.key);
+        return n;
+      });
+    const commit = () => {
+      if (mode === "live") {
+        void deleteEntryItemAction(it.key).then((res) => {
+          if (!res.ok) {
+            unhide();
+            setNotice(res.error);
+          } else router.refresh();
+        });
+      } else {
+        setItems((prev) => {
+          const next = prev.filter((x) => x.key !== it.key);
+          if (isLocal) saveLocalDay(today, next);
+          return next;
+        });
+        unhide();
+      }
+    };
+    const timer = window.setTimeout(() => {
+      pendingDeletes.current.delete(it.key);
+      commit();
+    }, 6000);
+    pendingDeletes.current.set(it.key, { timer, commit });
+
+    setNotice(`${it.food.name_fa} حذف شد.`, {
+      label: "برگردان",
+      run: () => {
+        const p = pendingDeletes.current.get(it.key);
+        if (!p) return;
+        window.clearTimeout(p.timer);
+        pendingDeletes.current.delete(it.key);
+        unhide();
+        setFresh(new Set([it.key]));
+        setPulse((n) => n + 1);
+        setNotice("برگشت.");
+      },
+    });
+  }
+
   function addToMeal(m: MealType) {
     const q = quickMeals.find((x) => x.meal_type === m && !usedQuick.has(x.id));
     if (q && (isSample || isLocal)) addQuick(q);
@@ -351,18 +477,40 @@ export function TodayView({ today: todayProp, initialItems, goals: goalsProp, pa
             <InsightCard text={insight.text} hint={insight.hint} />
           )}
           <StreakCard today={today} logDates={logDates} current={streak.current} loggedToday={loggedToday} complete={complete} />
-          <MealList groups={groups} freshKeys={fresh} onAdd={addToMeal} />
+          <MealList groups={groups} freshKeys={fresh} leavingKeys={leaving} onAdd={addToMeal} onEdit={(it) => { setEditError(null); setEditing(it); }} />
         </div>
       </main>
 
+      {editing && (
+        <EditItemSheet
+          key={editing.key}
+          item={editing}
+          saving={editSaving}
+          error={editError}
+          onClose={() => setEditing(null)}
+          onSave={saveEdit}
+          onDelete={() => deleteItem(editing)}
+        />
+      )}
       {draft && <ConfirmSheet draft={draft} saving={saving} error={saveError} onCancel={cancelDraft} onConfirm={confirmDraft} nuti={nutiOn} />}
 
       <div className="fixed inset-x-0 bottom-0 z-10">
         <div className="mx-auto max-w-md border-t border-line/60 bg-ground/95 px-4 pt-2.5 pb-3 backdrop-blur-sm sm:rounded-t-[var(--radius-card)] sm:border-x">
-          {notice && (
-            <p role="status" key={notice} className="animate-rise mb-2 rounded-[var(--radius-btn)] bg-ink px-3 py-2 text-[13px] text-ground">
-              {notice}
-            </p>
+          {toast && (
+            <div role="status" key={toast.id} className="animate-rise mb-2 flex items-center justify-between gap-3 rounded-[var(--radius-btn)] bg-ink py-2 ps-3 pe-1.5 text-[13px] text-ground">
+              <span className="min-w-0">{toast.text}</span>
+              {toast.action && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    toast.action?.run();
+                  }}
+                  className="shrink-0 rounded-[8px] px-2.5 py-1 font-semibold text-ground underline decoration-ground/40 underline-offset-4 hover:bg-ground/10"
+                >
+                  {toast.action.label}
+                </button>
+              )}
+            </div>
           )}
           <Composer
             quickMeals={isSample || isLocal ? quickMeals : []}

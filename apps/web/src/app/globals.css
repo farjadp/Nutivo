@@ -77,6 +77,7 @@
   --animate-rise: rise 360ms var(--ease-out-expo) both;
   --animate-glow: glow 1200ms var(--ease-out-expo) both;
   --animate-sheet: sheet 380ms var(--ease-out-expo) both;
+  --animate-leave: leave 260ms var(--ease-out-expo) both;
 }
 
 @keyframes pop {
@@ -90,6 +91,10 @@
 @keyframes sheet {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
+}
+@keyframes leave {
+  from { opacity: 1; transform: translateX(0); max-height: 80px; }
+  to { opacity: 0; transform: translateX(-24px); max-height: 0; padding-block: 0; }
 }
 @keyframes fade {
   from { opacity: 0; }

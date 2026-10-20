@@ -1,15 +1,27 @@
-import { Camera, Plus } from "lucide-react";
+import { Camera, ChevronLeft, Plus } from "lucide-react";
 import type { MealType } from "@nutivo/core";
 import { faInt } from "@/shared/lib/format";
 import { FoodIconTile } from "@/shared/ui/food-icon";
+import type { LoggedItem } from "@/entities/day/sample";
 import type { MealGroup } from "../model/day";
 
 const MEAL_LABEL: Record<MealType, string> = { breakfast: "صبحانه", lunch: "ناهار", snack: "میان‌وعده", dinner: "شام" };
 
-export function MealList({ groups, freshKeys, onAdd }: { groups: MealGroup[]; freshKeys: Set<string>; onAdd: (m: MealType) => void }) {
+interface Props {
+  groups: MealGroup[];
+  freshKeys: Set<string>;
+  /** Items playing their exit animation before they disappear. */
+  leavingKeys?: Set<string>;
+  onAdd: (m: MealType) => void;
+  /** Tap a food to edit or delete it. Omit for a read-only list. */
+  onEdit?: (item: LoggedItem) => void;
+  title?: string;
+}
+
+export function MealList({ groups, freshKeys, leavingKeys, onAdd, onEdit, title = "وعده‌های امروز" }: Props) {
   return (
     <section aria-labelledby="meals-title" className="grid gap-3">
-      <h2 id="meals-title" className="text-xl font-semibold">وعده‌های امروز</h2>
+      <h2 id="meals-title" className="text-xl font-semibold">{title}</h2>
       {groups.map((g) => (
         <article key={g.meal_type} className="rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-soft)]">
           <header className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2">
@@ -33,9 +45,16 @@ export function MealList({ groups, freshKeys, onAdd }: { groups: MealGroup[]; fr
           {g.items.length === 0 ? (
             <p className="px-4 pb-4 text-sm text-ink-2">هنوز چیزی ثبت نشده.</p>
           ) : (
-            <ul className="divide-y divide-line px-4 pb-1">
+            <ul className="divide-y divide-line px-4 pb-1.5">
               {g.items.map((it) => (
-                <li key={it.key} className={`flex items-center justify-between gap-3 py-2.5 ${freshKeys.has(it.key) ? "animate-rise" : ""}`}>
+                <li key={it.key} className={`overflow-hidden ${leavingKeys?.has(it.key) ? "animate-leave" : freshKeys.has(it.key) ? "animate-rise" : ""}`}>
+                  <button
+                    type="button"
+                    disabled={!onEdit}
+                    onClick={() => onEdit?.(it)}
+                    aria-label={onEdit ? `ویرایش ${it.food.name_fa}` : undefined}
+                    className="group -mx-2 flex w-[calc(100%+1rem)] items-center justify-between gap-3 rounded-[var(--radius-btn)] px-2 py-2.5 text-start transition-colors duration-150 enabled:hover:bg-track/60 enabled:active:bg-track"
+                  >
                   <FoodIconTile food={it.food} size="sm" estimated={it.is_estimated} />
                   <div className="min-w-0 flex-1">
                     <p className="flex items-center gap-1.5 truncate text-[15px]">
@@ -54,6 +73,8 @@ export function MealList({ groups, freshKeys, onAdd }: { groups: MealGroup[]; fr
                     </p>
                     <p className="text-[11px] text-ink-2">پ {faInt(it.macros.protein_g)}</p>
                   </div>
+                  {onEdit && <ChevronLeft size={16} strokeWidth={1.75} className="-ms-1 shrink-0 text-ink-2/60 transition-transform duration-150 group-hover:-translate-x-0.5" aria-hidden />}
+                  </button>
                 </li>
               ))}
             </ul>
