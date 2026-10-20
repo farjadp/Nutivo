@@ -3,6 +3,7 @@ import { isAdminConfigured } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isAuthDisabled } from "@/shared/config";
 import { createLinkCode } from "./service.server";
+import { telegramUsername } from "./telegram.server";
 
 export type LinkCodeResult = { ok: true; code: string; url: string | null } | { ok: false; error: string };
 
@@ -12,6 +13,6 @@ export async function createLinkCodeAction(): Promise<LinkCodeResult> {
   const { data } = await (await createClient()).auth.getUser();
   if (!data.user) return { ok: false, error: "اول وارد حساب شو." };
   const code = await createLinkCode(data.user.id);
-  const bot = process.env.NUTIVO_TELEGRAM_BOT_USERNAME?.replace(/^@/, "");
+  const bot = await telegramUsername();
   return { ok: true, code, url: bot ? `https://t.me/${bot}?start=link_${code}` : null };
 }

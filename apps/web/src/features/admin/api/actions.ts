@@ -6,6 +6,7 @@ import { logEvent } from "@/lib/server/log";
 import { canEncrypt, encryptSecret, last4 } from "@/lib/server/secrets";
 import { getSecret, invalidateSettings, SETTING_KEYS } from "@/lib/server/settings";
 import { adminClient } from "@/lib/supabase/admin";
+import { getMe, TELEGRAM_TOKEN_RE } from "@/features/bot/api/telegram.server";
 import { actorOf, requireAdmin, type AdminContext } from "./guard.server";
 
 export type AdminResult = { ok: true; message: string } | { ok: false; error: string };
@@ -169,4 +170,50 @@ export async function testProviderAction(provider: "anthropic" | "openai" | "goo
     await logEvent({ kind: "system", level: "warn", event: `ai.test_failed`, ...actorOf(ctx), entity: "provider", entity_id: provider, message: msg });
     return { ok: false, error: `اتصال ناموفق: ${msg}` };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Telegram bot
+// ---------------------------------------------------------------------------
+
+/** Saves the BotFather token (encrypted) after Telegram confirms it, and stores the bot's username. */
+export async function saveTelegramTokenAction(token: string): Promise<AdminResult> {
+  const ctx = await liveAdmin();
+  if (isResult(ctx)) return ctx;
+  if (!canEncrypt()) return { ok: false, error: "NUTIVO_SECRETS_KEY تنظیم نشده؛ ذخیره امن ممکن نیست." };
+  const t = token.trim();
+  if (!TELEGRAM_TOKEN_RE.test(t)) return { ok: false, error: "قالب توکن درست نیست. شکلش این است: 123456789:ABC… (از BotFather)." };
+  const me = await getMe(t);
+  if (!me.ok) return { ok: false, error: `تلگرام این توکن را قبول نکرد: ${me.error}` };
+  const now = new Date().toISOString();
+  const { error } = await adminClient().from("app_settings").upsert([
+    { key: SETTING_KEYS.telegramToken, value: null, secret_ciphertext: encryptSecret(t), secret_last4: last4(t), updated_at: now, updated_by: ctx.userId },
+    { key: SETTING_KEYS.telegramUsername, value: me.username, secret_ciphertext: null, secret_last4: null, updated_at: now, updated_by: ctx.userId },
+  ]);
+  if (error) return { ok: false, error: "ذخیره توکن انجام نشد." };
+  invalidateSettings();
+  await logEvent({ kind: "system", event: "settings.secret_saved", ...actorOf(ctx), entity: "setting", entity_id: SETTING_KEYS.telegramToken, message: `@${me.username} …${last4(t)}` });
+  revalidatePath("/admin/settings");
+  return { ok: true, message: `ذخیره شد. ربات @${me.username} (${me.name}) شناخته شد. حالا بات را اجرا کن: pnpm bot` };
+}
+
+export async function testTelegramAction(): Promise<AdminResult> {
+  const ctx = await requireAdmin();
+  const token = (await getSecret(SETTING_KEYS.telegramToken, "TELEGRAM_BOT_TOKEN")) ?? "";
+  if (!token) return { ok: false, error: "توکنی تنظیم نشده." };
+  const t0 = Date.now();
+  const me = await getMe(token);
+  await logEvent({ kind: "system", level: me.ok ? "info" : "warn", event: me.ok ? "bot.test_ok" : "bot.test_failed", ...actorOf(ctx), message: me.ok ? `@${me.username}` : me.error });
+  return me.ok ? { ok: true, message: `اتصال برقرار است: @${me.username} (${Date.now() - t0}ms).` } : { ok: false, error: `اتصال ناموفق: ${me.error}` };
+}
+
+export async function clearTelegramAction(): Promise<AdminResult> {
+  const ctx = await liveAdmin();
+  if (isResult(ctx)) return ctx;
+  const { error } = await adminClient().from("app_settings").delete().in("key", [SETTING_KEYS.telegramToken, SETTING_KEYS.telegramUsername]);
+  if (error) return { ok: false, error: "حذف انجام نشد." };
+  invalidateSettings();
+  await logEvent({ kind: "system", level: "warn", event: "settings.secret_removed", ...actorOf(ctx), entity: "setting", entity_id: SETTING_KEYS.telegramToken });
+  revalidatePath("/admin/settings");
+  return { ok: true, message: "توکن حذف شد. بات بعد از ری‌استارت دیگر وصل نمی‌شود." };
 }

@@ -1,7 +1,8 @@
 import { CheckCircle2, CircleAlert } from "lucide-react";
 import { requireAdmin } from "@/features/admin/api/guard.server";
 import { PageHeader, Panel } from "@/features/admin/ui/bits";
-import { ProviderCard, ValueField, type ProviderView } from "@/features/admin/ui/settings-forms";
+import { ProviderCard, TelegramCard, ValueField, type ProviderView, type TelegramView } from "@/features/admin/ui/settings-forms";
+import { faAgo } from "@/shared/lib/format";
 import { canEncrypt, last4 } from "@/lib/server/secrets";
 import { listSettingsMasked, SETTING_KEYS } from "@/lib/server/settings";
 import { adminClient } from "@/lib/supabase/admin";
@@ -33,6 +34,24 @@ export default async function SettingsPage() {
     provider("openai", "OpenAI", SETTING_KEYS.openaiKey, "OPENAI_API_KEY", "برای تبدیل صدا به متن (ثبت صوتی، نسخه ۱.۵). فعلاً اختیاری.", "sk-…", "https://platform.openai.com/api-keys"),
     provider("google", "Google Gemini", SETTING_KEYS.googleKey, "GOOGLE_API_KEY", "پشتیبان یا مقایسه کیفیت تشخیص عکس. فعلاً اختیاری.", "AIza…", "https://aistudio.google.com/apikey"),
   ];
+
+  const tgRow = get(SETTING_KEYS.telegramToken);
+  const tgEnv = process.env.TELEGRAM_BOT_TOKEN;
+  const telegram: TelegramView = {
+    source: tgRow?.hasSecret ? "panel" : tgEnv ? "env" : "none",
+    last4: tgRow?.hasSecret ? tgRow.last4 : tgEnv ? last4(tgEnv) : null,
+    username: (get(SETTING_KEYS.telegramUsername)?.value as string | undefined) ?? process.env.NUTIVO_TELEGRAM_BOT_USERNAME ?? null,
+    linkedUsers: 0,
+    lastSeen: null,
+  };
+  if (ctx.live) {
+    const [{ count }, { data: seen }] = await Promise.all([
+      adminClient().from("telegram_links").select("telegram_id", { count: "exact", head: true }),
+      adminClient().from("telegram_links").select("last_seen_at").order("last_seen_at", { ascending: false }).limit(1).maybeSingle(),
+    ]);
+    telegram.linkedUsers = count ?? 0;
+    telegram.lastSeen = (seen?.last_seen_at as string | undefined) ?? null;
+  }
 
   let figfitRows: number | null = null;
   if (ctx.live) {
@@ -71,6 +90,11 @@ export default async function SettingsPage() {
         {providers.map((p) => <ProviderCard key={p.id} p={p} live={ctx.live} />)}
       </div>
       <p className="mt-2 text-xs text-ink-2">ترتیب استفاده: کلید ذخیره‌شده در پنل، سپس متغیر محیطی. حذف کلید از پنل، اپ را به کلید env برمی‌گرداند.</p>
+
+      <h2 className="mb-3 mt-6 text-lg font-semibold">کانال‌ها</h2>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <TelegramCard t={telegram} live={ctx.live} lastSeenLabel={telegram.lastSeen ? faAgo(telegram.lastSeen) : "—"} />
+      </div>
 
       <h2 className="mb-3 mt-6 text-lg font-semibold">منابع داده غذا</h2>
       <Panel>

@@ -90,7 +90,7 @@ export async function GET(request: Request) {
 
 /** Sends the day card and report caption to the user's Telegram chat once per day. */
 async function pushTelegram(userId: string, timezone: string, date: string): Promise<boolean> {
-  if (!telegramToken()) return false;
+  if (!(await telegramToken())) return false;
   const db = adminClient();
   const { data: link } = await db.from("telegram_links").select("chat_id, notify_report").eq("user_id", userId).maybeSingle();
   if (!link?.notify_report) return false;

@@ -23,6 +23,7 @@ import type { BotResult } from "@nutivo/core";
 import { logEvent } from "@/lib/server/log";
 import { isAdminConfigured } from "@/lib/supabase/admin";
 import { botSecret } from "@/shared/config";
+import { telegramToken, telegramUsername } from "@/features/bot/api/telegram.server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -90,6 +91,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
   if (!authorized(req)) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   if (!isAdminConfigured()) return NextResponse.json({ ok: false, error: "service role not configured" }, { status: 503 });
   const { action } = await ctx.params;
+  // The bot process asks for its Telegram token at startup (set in the admin panel, else env).
+  if (action === "config") {
+    const token = await telegramToken();
+    return token
+      ? NextResponse.json({ ok: true, data: { token, username: await telegramUsername() } })
+      : NextResponse.json({ ok: false, error: "توکن تلگرام در پنل ادمین (تنظیمات) ثبت نشده.", code: "not_found" }, { status: 404 });
+  }
   if (!(action in Bodies)) return NextResponse.json({ ok: false, error: "unknown action" }, { status: 404 });
   const a = action as Action;
   const parsed = Bodies[a].safeParse(await req.json().catch(() => null));

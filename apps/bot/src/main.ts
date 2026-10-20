@@ -1,18 +1,29 @@
 import { createApi } from "./api";
 import { createBot } from "./bot";
 
-const token = process.env.TELEGRAM_BOT_TOKEN;
 const baseUrl = process.env.NUTIVO_API_URL ?? "http://localhost:3000";
 const secret = process.env.NUTIVO_BOT_SECRET;
 
-if (!token) {
-  console.error("TELEGRAM_BOT_TOKEN is not set (BotFather → /newbot). See apps/bot/.env.example.");
-  process.exit(1);
-}
 if (!secret || secret.length < 32) {
   console.error("NUTIVO_BOT_SECRET must match apps/web/.env.local (≥ 32 chars).");
   process.exit(1);
 }
+
+/** Token from TELEGRAM_BOT_TOKEN, else from the web app (admin panel → تنظیمات → بات تلگرام). */
+async function resolveToken(): Promise<string> {
+  if (process.env.TELEGRAM_BOT_TOKEN) return process.env.TELEGRAM_BOT_TOKEN;
+  try {
+    const res = await fetch(`${baseUrl.replace(/\/$/, "")}/api/bot/config`, { method: "POST", headers: { authorization: `Bearer ${secret}` } });
+    const j = (await res.json()) as { ok: boolean; data?: { token: string; username: string | null }; error?: string };
+    if (j.ok && j.data?.token) return j.data.token;
+    console.error(`[bot] ${j.error ?? `HTTP ${res.status}`}`);
+  } catch (err) {
+    console.error(`[bot] cannot reach the web app at ${baseUrl}. Is it running (pnpm dev)?`, err instanceof Error ? err.message : err);
+  }
+  process.exit(1);
+}
+
+const token = await resolveToken();
 
 const api = createApi({ baseUrl, secret });
 const bot = createBot(token, {

@@ -11,6 +11,9 @@ export const SETTING_KEYS = {
   openaiTranscribeModel: "ai.openai.transcribe_model",
   googleKey: "ai.google.api_key",
   reportHour: "app.report_hour_local",
+  telegramToken: "bot.telegram.token",
+  /** Filled automatically from Telegram getMe when the token is saved. */
+  telegramUsername: "bot.telegram.username",
 } as const;
 
 interface Row {
