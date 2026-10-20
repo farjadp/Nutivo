@@ -57,7 +57,10 @@ export default function Login() {
             label="ایمیل"
             ltr
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(v) => {
+              setEmail(v);
+              setError(null);
+            }}
             placeholder="you@example.com"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -79,7 +82,10 @@ export default function Login() {
             label="کد ورود"
             ltr
             value={code}
-            onChangeText={setCode}
+            onChangeText={(v) => {
+              setCode(v);
+              setError(null);
+            }}
             placeholder="۱۲۳۴۵۶"
             keyboardType="number-pad"
             autoComplete="one-time-code"
