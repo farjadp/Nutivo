@@ -1,17 +1,9 @@
-import { Sparkles } from "lucide-react";
-import { ComingSoon } from "@/shared/ui/coming-soon";
+import { AskView } from "@/features/ask/ui/ask-view";
+import { isAuthDisabled, isSupabaseConfigured } from "@/shared/config";
 
 export const metadata = { title: "بپرس · Nutivo" };
+export const dynamic = "force-dynamic";
 
-export default function Page() {
-  return (
-    <ComingSoon
-      title="بپرس"
-      active="/ask"
-      Icon={Sparkles}
-      ai
-      body="«برای شام چی بخورم؟» Nutivo با توجه به کالری و پروتئینی که امروز مانده، از غذاهایی که معمولاً می‌خوری سه گزینه پیشنهاد می‌دهد."
-      when="در هفته ۲ ساخته می‌شود."
-    />
-  );
+export default function AskPage() {
+  return <AskView mode={!isSupabaseConfigured() ? "sample" : isAuthDisabled() ? "local" : "live"} />;
 }
