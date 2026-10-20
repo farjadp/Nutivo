@@ -1,10 +1,11 @@
 "use client";
-import { Activity, LayoutDashboard, Settings, Users } from "lucide-react";
+import { Activity, LayoutDashboard, Settings, Users, ChartColumn } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const ITEMS = [
   { href: "/admin", label: "داشبورد", Icon: LayoutDashboard, exact: true },
+  { href: "/admin/metrics", label: "متریک‌ها", Icon: ChartColumn },
   { href: "/admin/users", label: "کاربران", Icon: Users },
   { href: "/admin/logs", label: "لاگ‌ها", Icon: Activity },
   { href: "/admin/settings", label: "تنظیمات", Icon: Settings },

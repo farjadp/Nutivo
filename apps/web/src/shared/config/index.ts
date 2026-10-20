@@ -27,3 +27,14 @@ export function isFigfitEnabled(): boolean {
 export function excludedFoodSources(): string[] {
   return isFigfitEnabled() ? [] : ["figfit"];
 }
+
+/**
+ * USD per million tokens for the admin cost chart. Defaults are an assumption until set:
+ * NUTIVO_AI_PRICE_IN / NUTIVO_AI_PRICE_OUT (check the provider's current price list).
+ */
+export function aiPrices(): { input: number; output: number; assumed: boolean } {
+  const i = Number(process.env.NUTIVO_AI_PRICE_IN);
+  const o = Number(process.env.NUTIVO_AI_PRICE_OUT);
+  const set = Number.isFinite(i) && i > 0 && Number.isFinite(o) && o > 0;
+  return set ? { input: i, output: o, assumed: false } : { input: 3, output: 15, assumed: true };
+}

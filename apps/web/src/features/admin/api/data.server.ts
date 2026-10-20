@@ -1,7 +1,7 @@
 import "server-only";
 import { adminClient } from "@/lib/supabase/admin";
 import { SAMPLE_LOGS, SAMPLE_STATS, SAMPLE_USERS } from "../model/sample";
-import { PAGE_SIZE, type AdminStats, type AdminUserRow, type LogFilters, type LogRow, type Page } from "../model/types";
+import { PAGE_SIZE, type AdminMetrics, type AdminStats, type AdminUserRow, type LogFilters, type LogRow, type Page } from "../model/types";
 import type { AdminContext } from "./guard.server";
 
 export function pageParam(v: string | string[] | undefined): number {
@@ -108,4 +108,11 @@ export async function listLogs(ctx: AdminContext, f: LogFilters, page: number, p
   const { data, error, count } = await query.order("at", { ascending: false }).range((page - 1) * pageSize, page * pageSize - 1);
   if (error) throw new Error(`activity_log: ${error.message}`);
   return { rows: (data ?? []) as LogRow[], total: count ?? 0, page, pageSize, source: "live" };
+}
+
+export async function getMetrics(ctx: AdminContext): Promise<{ metrics: AdminMetrics | null; source: "live" | "sample" }> {
+  if (!ctx.live) return { metrics: null, source: "sample" };
+  const { data, error } = await adminClient().rpc("admin_metrics", { weeks: 8, ai_days: 14 });
+  if (error) throw new Error(`admin_metrics: ${error.message}`);
+  return { metrics: data as AdminMetrics, source: "live" };
 }

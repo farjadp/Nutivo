@@ -55,3 +55,16 @@ export interface LogFilters {
 }
 
 export const PAGE_SIZE = 20;
+
+export interface RetentionCell {
+  eligible: number;
+  retained: number;
+}
+
+export interface AdminMetrics {
+  today: string;
+  retention: { d1: RetentionCell; d7: RetentionCell; d30: RetentionCell };
+  cohorts: { week: string; size: number; d1: RetentionCell; d7: RetentionCell; d30: RetentionCell }[];
+  frequency: { active_7d: number; avg_days: number; four_plus: number; histogram: { days: number; users: number }[] };
+  ai: { date: string; model: string; event: string; calls: number; input_tokens: number; output_tokens: number }[];
+}
