@@ -11,3 +11,6 @@ dist
 
 # Third-party datasets with non-commercial licences: local use only, never commit
 packages/db/seed/external/
+
+# Test photos (Wikimedia Commons, see tests/photos/CREDITS.md); kept local
+tests/photos/*.jpg

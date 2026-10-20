@@ -36,7 +36,7 @@ function localContext() {
   const items = all.days[t] ?? [];
   const usual = suggestRepeats({ history: all.days, today: t, hour: new Date().getHours(), limit: 8 }).map((r) => ({
     id: r.id,
-    name: [...new Set(r.items.map((i) => i.food.name_fa))].slice(0, 3).join(" و "),
+    name: [...new Set(r.items.map((i) => i.food.name_fa.replace(/\s*\(.*?\)/g, "").trim()))].slice(0, 3).join(" و "),
     meal_type: r.meal_type,
     items: r.items.map((i) => ({ food_id: i.food.id, qty: i.qty, unit: i.unit, grams: i.grams })),
   }));

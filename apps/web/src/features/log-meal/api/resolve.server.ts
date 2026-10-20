@@ -24,10 +24,23 @@ export async function resolveMeal(supabase: SupabaseClient, meal: ParsedMeal) {
   const perItem = await Promise.all(
     meal.items.map(async (it) => {
       const base = searchTerm(it.name_raw, it.unit) || normalizeFa(it.name_raw);
-      const q = it.prep_hint && PREP_WORDS[it.prep_hint] && !base.includes(PREP_WORDS[it.prep_hint]!) ? `${base} ${PREP_WORDS[it.prep_hint]}` : base;
-      const { data, error } = await supabase.rpc("search_foods", { q, lim: 5, exclude_sources: excludedFoodSources() });
-      if (error) throw new Error(`search_foods failed: ${error.message}`);
-      const hits = (data ?? []) as { id: string; score: number }[];
+      const search = async (q: string) => {
+        const { data, error } = await supabase.rpc("search_foods", { q, lim: 5, exclude_sources: excludedFoodSources() });
+        if (error) throw new Error(`search_foods failed: ${error.message}`);
+        return (data ?? []) as { id: string; score: number }[];
+      };
+      const hits = await search(base);
+      // The cooking word only refines a match; it must never outweigh the food's own name
+      // («ته‌دیگ» + «سرخ شده» used to land on fried chicken).
+      const prep = it.prep_hint ? PREP_WORDS[it.prep_hint] : undefined;
+      if (prep && !base.includes(prep) && (hits[0]?.score ?? 0) < 0.95) {
+        const withPrep = await search(`${base} ${prep}`);
+        const names = new Set(hits.map((h) => h.id));
+        const refined = withPrep.find((h) => names.has(h.id));
+        if (refined && refined.id !== hits[0]?.id && refined.score > (hits[0]?.score ?? 0)) {
+          return { it, hits: [refined, ...hits.filter((h) => h.id !== refined.id)] };
+        }
+      }
       return { it, hits };
     }),
   );

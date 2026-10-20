@@ -61,5 +61,6 @@ describe("groupThousands", () => {
   it("adds the Persian separator to long integers only", () => {
     expect(groupThousands("کالری ۱۰۵۹ بود و ۷۱ گرم")).toBe("کالری ۱٬۰۵۹ بود و ۷۱ گرم");
     expect(groupThousands("۱٬۹۰۰ و ۲۰۲۶")).toBe("۱٬۹۰۰ و ۲٬۰۲۶");
+    expect(groupThousands("هدف 105 گرمی و 1596 کالری")).toBe("هدف ۱۰۵ گرمی و ۱٬۵۹۶ کالری");
   });
 });

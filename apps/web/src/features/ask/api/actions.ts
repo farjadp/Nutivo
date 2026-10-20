@@ -83,7 +83,7 @@ export async function askAction(input: z.infer<typeof AskInput>): Promise<AskRes
     eatenMacros = sumMacros(day.items.map((i) => i.macros));
     usual = day.repeats.map((r) => ({
       id: r.id,
-      name: [...new Set(r.items.map((i) => i.food.name_fa))].slice(0, 3).join(" و "),
+      name: [...new Set(r.items.map((i) => i.food.name_fa.replace(/\s*\(.*?\)/g, "").trim()))].slice(0, 3).join(" و "),
       meal_type: r.meal_type,
       items: r.items.map((i) => ({ food_id: i.food.id, qty: i.qty, unit: i.unit, grams: i.grams })),
     }));

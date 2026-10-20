@@ -21,10 +21,13 @@ const dayNum = (d: string) => faInt(Number(d.slice(8, 10)));
 export function DayStrip({ today, selected, marks, onSelect }: Props) {
   const days = Array.from({ length: DAY_WINDOW }, (_, i) => addDays(today, i - (DAY_WINDOW - 1)));
   const listRef = useRef<HTMLOListElement>(null);
+  const first = useRef(true);
 
   useEffect(() => {
     const el = listRef.current?.querySelector<HTMLElement>(`[data-day="${selected}"]`);
-    el?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+    // Land on the selected day instantly on load; animate only when the user changes day.
+    void el?.scrollIntoView({ inline: "center", block: "nearest", behavior: first.current ? "instant" : "smooth" });
+    first.current = false;
   }, [selected]);
 
   return (

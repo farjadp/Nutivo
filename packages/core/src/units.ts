@@ -47,6 +47,14 @@ export const GENERIC_UNIT_FALLBACKS: Record<string, Fallback> = {
   tablespoon: { grams: 15, keys: ["قاشق غذاخوری", "قاشق غذا خوری", "قاشق سوپخوری", "ق غ", "tbsp", "tablespoon", "tablespoons"] },
   teaspoon: { grams: 5, keys: ["قاشق چای‌خوری", "قاشق چایخوری", "قاشق مرباخوری", "ق چ", "tsp", "teaspoon", "teaspoons"] },
   glass: { grams: 240, keys: ["لیوان", "glass", "cup", "cups", "پیمانه"] },
+  // Household portions, used only when the food has no own unit (always marked estimated).
+  bowl: { grams: 250, keys: ["کاسه", "bowl"] },
+  plate: { grams: 300, keys: ["بشقاب", "plate"] },
+  ladle: { grams: 120, keys: ["ملاقه", "ladle"] },
+  smallBowl: { grams: 100, keys: ["پیاله", "small bowl"] },
+  ricePaddle: { grams: 100, keys: ["کفگیر", "rice paddle"] },
+  handful: { grams: 30, keys: ["مشت", "handful"] },
+  teaGlass: { grams: 100, keys: ["استکان"] },
   milliliter: { grams: 1, keys: ["میلی‌لیتر", "سی‌سی", "ml", "cc", "milliliter", "millilitre"] },
   liter: { grams: 1000, keys: ["لیتر", "l", "liter", "litre"] },
 };

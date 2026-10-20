@@ -7,7 +7,7 @@ let seq = 0;
 /** Chip label: «صبحانه دیروز», or the first two foods and a count of the rest. */
 export function repeatLabel(m: RepeatMeal): string {
   if (m.yesterday) return `${MEAL_LABEL[m.meal_type]} دیروز`;
-  const names = [...new Set(m.items.map((i) => i.food.name_fa))];
+  const names = [...new Set(m.items.map((i) => i.food.name_fa.replace(/\s*\(.*?\)/g, "").trim()))];
   const head = names.slice(0, 2).join(" و ");
   return names.length > 2 ? `${head} +${names.length - 2}` : head;
 }

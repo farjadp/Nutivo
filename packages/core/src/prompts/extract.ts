@@ -88,7 +88,10 @@ export function extractPromptForText(text: string, nowISO: string): string {
 /** User message to accompany an image block. */
 export function extractPromptForPhoto(nowISO: string, caption?: string): string {
   const cap = caption && caption.trim().length > 0 ? `\n\nUser caption:\n"""\n${caption}\n"""` : "";
-  return `Current time (ISO): ${nowISO}\n\nThe attached image shows what the user is about to eat or has eaten.${cap}\n\nReturn the meal as JSON. Mark every item \`from_photo: true\`, list only what is visible, and ask one Persian question if the portion or a hidden ingredient (روغن، شکر) matters and cannot be seen.`;
+  return `Current time (ISO): ${nowISO}\n\nThe attached image shows what the user is about to eat or has eaten.${cap}\n\nReturn the meal as JSON. Mark every item \`from_photo: true\`, list only what is visible, and ask one Persian question if the portion or a hidden ingredient (روغن، شکر) matters and cannot be seen.
+For photos, \`name_raw\` is the short everyday Persian name of the dish as an Iranian would say it (for example «زرشک پلو»، «قورمه‌سبزی»، «ته‌دیگ»), not a description. Name the whole dish when it is one dish (زرشک پلو، باقالی پلو), and list side items separately.
+Skip pure garnish that adds almost nothing: a lemon wedge, a few herb leaves, parsley, a slice of radish. Include سبزی خوردن، ترشی or سالاد only when there is a real portion.
+For rice or stew, use household units the user would recognise: کفگیر for rice, ملاقه or کاسه for stew, سیخ for kebab.`;
 }
 
 /**
