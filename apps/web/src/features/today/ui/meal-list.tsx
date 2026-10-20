@@ -1,6 +1,7 @@
 import { Camera, Plus } from "lucide-react";
 import type { MealType } from "@nutivo/core";
 import { faInt } from "@/shared/lib/format";
+import { FoodIconTile } from "@/shared/ui/food-icon";
 import type { MealGroup } from "../model/day";
 
 const MEAL_LABEL: Record<MealType, string> = { breakfast: "صبحانه", lunch: "ناهار", snack: "میان‌وعده", dinner: "شام" };
@@ -35,7 +36,8 @@ export function MealList({ groups, freshKeys, onAdd }: { groups: MealGroup[]; fr
             <ul className="divide-y divide-line px-4 pb-1">
               {g.items.map((it) => (
                 <li key={it.key} className={`flex items-center justify-between gap-3 py-2.5 ${freshKeys.has(it.key) ? "animate-rise" : ""}`}>
-                  <div className="min-w-0">
+                  <FoodIconTile food={it.food} size="sm" estimated={it.is_estimated} />
+                  <div className="min-w-0 flex-1">
                     <p className="flex items-center gap-1.5 truncate text-[15px]">
                       {it.food.name_fa}
                       {it.from_photo && <Camera size={14} strokeWidth={2} className="shrink-0 text-ink-2" aria-label="از روی عکس" />}

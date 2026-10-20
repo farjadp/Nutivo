@@ -5,3 +5,4 @@ export * from "./calc";
 export * from "./goals";
 export * from "./report";
 export * from "./prompts/extract";
+export * from "./icons/food-icons";

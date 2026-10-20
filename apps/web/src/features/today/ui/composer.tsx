@@ -2,6 +2,7 @@
 import { Camera, History, SendHorizontal, Sparkles } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
 import type { QuickMeal } from "@/entities/day/sample";
+import { FoodIcon } from "@/shared/ui/food-icon";
 
 interface Props {
   quickMeals: QuickMeal[];
@@ -45,8 +46,9 @@ export function Composer({ quickMeals, usedQuick, busy, onQuick, onText, onPhoto
               type="button"
               disabled={usedQuick.has(q.id)}
               onClick={() => onQuick(q)}
-              className="shrink-0 rounded-full border border-line bg-surface px-3 py-1.5 text-[13px] font-medium transition-colors duration-150 hover:border-green hover:bg-mint disabled:cursor-default disabled:opacity-45"
+              className="flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface py-1.5 ps-2 pe-3 text-[13px] font-medium transition-colors duration-150 hover:border-green hover:bg-mint disabled:cursor-default disabled:opacity-45"
             >
+              <FoodIcon food={{ name_fa: q.label }} size={18} className="text-green-ink" label="" />
               {q.label}
             </button>
           ))}

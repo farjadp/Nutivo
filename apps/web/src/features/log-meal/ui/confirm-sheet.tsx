@@ -4,6 +4,7 @@ import { Camera, CircleHelp, Minus, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toLatinDigits, toPersianDigits } from "@nutivo/core";
 import { faInt } from "@/shared/lib/format";
+import { FoodIconTile } from "@/shared/ui/food-icon";
 import type { Draft, DraftItem } from "../model/draft";
 import { draftTotals, itemMacros, regram, unitOptions } from "../model/recalc";
 
@@ -108,6 +109,7 @@ export function ConfirmSheet({ draft, saving, error, onCancel, onConfirm }: Prop
                   className={`rounded-[var(--radius-card)] border bg-surface p-3 transition-opacity duration-200 ${it.question ? "border-fat" : "border-line"} ${focusKey && !active ? "opacity-70" : ""}`}
                 >
                   <div className="flex items-start justify-between gap-2">
+                    <FoodIconTile food={food ?? { name_fa: it.name_raw }} size="md" estimated={it.is_estimated} />
                     <div className="min-w-0 flex-1">
                       <label htmlFor={`food-${it.key}`} className="sr-only">غذا</label>
                       <select
