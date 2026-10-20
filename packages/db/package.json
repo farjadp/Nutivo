@@ -7,7 +7,11 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "echo skip",
-    "seed:validate": "node scripts/validate-seed.mjs"
+    "seed:validate": "node scripts/validate-seed.mjs",
+    "seed:sql": "node scripts/generate-seed-sql.mjs"
   },
-  "devDependencies": { "vitest": "^3.2.4", "typescript": "^5.9.2" }
+  "devDependencies": {
+    "vitest": "^3.2.4",
+    "typescript": "^5.9.2"
+  }
 }

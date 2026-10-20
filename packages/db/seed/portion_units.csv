@@ -1,0 +1,60 @@
+food_id,unit_fa,unit_en,grams_default,grams_min,grams_max,notes
+fa:chelo,کفگیر,rice paddle (kafgir),100,80,130,"فرض: یک کفگیر سرپُر برنج آبکش ≈ ۱۰۰ گرم پخته. منبع منتشرشده پیدا نشد؛ بنیان‌گذار باید با ترازو کالیبره کند."
+fa:chelo,قاشق غذاخوری,tablespoon,20,15,30,
+fa:chelo,کاسه,bowl,250,180,350,کاسه معمولی خانگی
+fa:chelo,بشقاب,plate,300,200,420,یک بشقاب پر چلو (≈ ۳ کفگیر)
+fa:berenj-kham,پیمانه,cup (raw),185,170,200,USDA: 1 cup raw long-grain rice = 185 g
+fa:berenj-kham,قاشق غذاخوری,tablespoon (raw),12,10,15,
+fa:nan-sangak,کف دست,palm-size piece,30,20,40,
+fa:nan-sangak,برش,slice/strip,60,40,90,
+fa:nan-sangak,عدد,whole sheet,450,300,600,فرض: یک نان سنگک کامل تورنتو ≈ ۴۵۰ گرم؛ وزن نانوایی‌ها متفاوت است.
+fa:nan-barbari,کف دست,palm-size piece,35,25,50,
+fa:nan-barbari,برش,slice,70,50,100,
+fa:nan-barbari,عدد,whole loaf,350,250,450,فرض: یک بربری کامل ≈ ۳۵۰ گرم
+fa:nan-lavash,عدد,one sheet,40,25,60,فرض: ورق لواش سوپرمارکتی ۲۵ تا ۶۰ گرم
+fa:nan-lavash,کف دست,palm-size piece,15,10,20,
+fa:morgh-grill-sineh,تکه,piece (breast half),120,80,180,
+fa:morgh-grill-sineh,کف دست,palm-size portion,100,80,130,
+fa:morgh-sorkhshodeh,تکه,piece (boneless),120,80,200,وزن بدون استخوان
+fa:morgh-sorkhshodeh,کف دست,palm-size portion,100,80,130,
+fa:gusht-gusaleh-khoreshti,تکه,chunk,30,20,50,
+fa:gusht-gusaleh-khoreshti,کف دست,palm-size portion,100,80,130,
+fa:ghormeh-sabzi,کاسه,bowl,250,180,350,
+fa:ghormeh-sabzi,ملاقه,ladle,120,90,160,
+fa:ghormeh-sabzi,قاشق غذاخوری,tablespoon,25,20,35,
+fa:gheymeh,کاسه,bowl,250,180,350,
+fa:gheymeh,ملاقه,ladle,120,90,160,
+fa:gheymeh,قاشق غذاخوری,tablespoon,25,20,35,
+fa:kabab-kubideh,سیخ,skewer (cooked),80,70,90,"هر سیخ ۱۰۰ تا ۱۲۰ گرم گوشت خام (دستورهای سنتی ۱۰۰ گرم، بازه ۷۵ تا ۱۲۰)؛ با cooked_factor ۰٫۷۲ ≈ ۷۰ تا ۹۰ گرم پخته."
+fa:kabab-kubideh,تکه,piece,25,15,40,
+fa:jujeh-kabab,سیخ,skewer (cooked),120,90,160,فرض: ۱۶۰ گرم سینه خام روی هر سیخ × ۰٫۷۵
+fa:jujeh-kabab,تکه,piece,25,15,40,
+fa:salad-shirazi,کاسه,bowl,150,100,250,
+fa:salad-shirazi,قاشق غذاخوری,tablespoon,20,15,30,
+fa:mast,کاسه,bowl,150,100,250,
+fa:mast,پیاله,small bowl,100,70,150,
+fa:mast,قاشق غذاخوری,tablespoon,25,20,35,
+fa:dugh,لیوان,glass,250,200,330,
+fa:dugh,بطری کوچک,small bottle,330,300,500,
+fa:panir-feta,برش,slice,30,20,50,
+fa:panir-feta,قاشق غذاخوری,tablespoon,20,15,30,
+fa:panir-feta,کف دست,palm-size piece,40,30,60,
+fa:tokhm-morgh,عدد,one egg (shell-less),50,44,63,USDA: medium 44 g; large 50 g; extra-large 56 g; jumbo 63 g
+fa:kareh,قاشق غذاخوری,tablespoon,14,10,20,USDA: 1 tbsp = 14.2 g
+fa:kareh,قاشق چای‌خوری,teaspoon,5,4,7,
+fa:kareh,بسته کوچک,single-serve pat,10,8,12,
+fa:roghan-maye,قاشق غذاخوری,tablespoon,14,12,15,USDA: 1 tbsp canola = 14 g
+fa:roghan-maye,قاشق چای‌خوری,teaspoon,4.5,4,5,
+fa:khiar,عدد,one cucumber,120,80,300,خیار ایرانی/مینی ≈ ۸۰ تا ۱۵۰ گرم؛ خیار انگلیسی بزرگ تا ۳۰۰ گرم
+fa:khiar,برش,slice,7,5,10,
+fa:gojeh,عدد,one tomato,120,80,200,USDA: medium tomato ≈ 123 g
+fa:gojeh,برش,slice,20,15,30,
+fa:adasi,کاسه,bowl,250,180,350,
+fa:adasi,ملاقه,ladle,120,90,160,
+fa:ash-reshteh,کاسه,bowl,300,200,450,
+fa:ash-reshteh,ملاقه,ladle,130,100,180,
+fa:khorma,عدد,one date (medjool),24,18,30,USDA: 1 medjool pitted = 24 g
+fa:khorma,عدد مضافتی,one date (mazafati),10,7,14,فرض: خرمای مضافتی/کبکاب ۷ تا ۱۴ گرم؛ ارزش هر ۱۰۰ گرم این ردیف مجول است.
+fa:gerdu,عدد,one whole kernel,4,3,6,USDA: 1 oz ≈ 14 halves → ≈ 4 g per whole kernel
+fa:gerdu,مشت,handful,30,25,40,
+fa:gerdu,قاشق غذاخوری,tablespoon (chopped),7,6,9,
