@@ -7,7 +7,12 @@
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "lint": "pnpm -r lint"
+    "lint": "pnpm -r lint",
+    "db:start": "pnpm --filter @nutivo/db db:start",
+    "db:stop": "pnpm --filter @nutivo/db db:stop",
+    "db:reset": "pnpm --filter @nutivo/db db:reset",
+    "db:demo": "pnpm --filter @nutivo/db db:demo",
+    "db:status": "pnpm --filter @nutivo/db db:status"
   },
   "devDependencies": {
     "typescript": "^5.9.2"

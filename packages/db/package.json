@@ -8,10 +8,17 @@
     "typecheck": "tsc --noEmit",
     "lint": "echo skip",
     "seed:validate": "node scripts/validate-seed.mjs",
-    "seed:sql": "node scripts/generate-seed-sql.mjs"
+    "seed:sql": "node scripts/generate-seed-sql.mjs",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:status": "supabase status",
+    "db:demo": "node scripts/demo-data.mjs"
   },
   "devDependencies": {
-    "vitest": "^3.2.4",
-    "typescript": "^5.9.2"
+    "@supabase/supabase-js": "2.58.0",
+    "supabase": "^2.121.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
   }
 }
