@@ -9,18 +9,27 @@ if (!secret || secret.length < 32) {
   process.exit(1);
 }
 
-/** Token from TELEGRAM_BOT_TOKEN, else from the web app (admin panel → تنظیمات → بات تلگرام). */
+/**
+ * Token from TELEGRAM_BOT_TOKEN, else from the web app (admin panel → تنظیمات → بات تلگرام).
+ * Waits and retries every 10 s, so saving the token in the panel is enough to bring the bot up.
+ */
 async function resolveToken(): Promise<string> {
   if (process.env.TELEGRAM_BOT_TOKEN) return process.env.TELEGRAM_BOT_TOKEN;
-  try {
-    const res = await fetch(`${baseUrl.replace(/\/$/, "")}/api/bot/config`, { method: "POST", headers: { authorization: `Bearer ${secret}` } });
-    const j = (await res.json()) as { ok: boolean; data?: { token: string; username: string | null }; error?: string };
-    if (j.ok && j.data?.token) return j.data.token;
-    console.error(`[bot] ${j.error ?? `HTTP ${res.status}`}`);
-  } catch (err) {
-    console.error(`[bot] cannot reach the web app at ${baseUrl}. Is it running (pnpm dev)?`, err instanceof Error ? err.message : err);
+  let said = "";
+  for (;;) {
+    let msg: string;
+    try {
+      const res = await fetch(`${baseUrl.replace(/\/$/, "")}/api/bot/config`, { method: "POST", headers: { authorization: `Bearer ${secret}` } });
+      const j = (await res.json()) as { ok: boolean; data?: { token: string; username: string | null }; error?: string };
+      if (j.ok && j.data?.token) return j.data.token;
+      msg = res.status === 401 ? "NUTIVO_BOT_SECRET با apps/web/.env.local یکی نیست." : `${j.error ?? `HTTP ${res.status}`} منتظرم… (هر ۱۰ ثانیه دوباره چک می‌کنم)`;
+    } catch {
+      msg = `وب‌اپ روی ${baseUrl} در دسترس نیست. pnpm dev را اجرا کن؛ منتظرم…`;
+    }
+    if (msg !== said) console.info(`[bot] ${msg}`);
+    said = msg;
+    await new Promise((r) => setTimeout(r, 10_000));
   }
-  process.exit(1);
 }
 
 const token = await resolveToken();
