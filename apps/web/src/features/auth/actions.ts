@@ -1,6 +1,7 @@
 "use server";
 import { headers } from "next/headers";
 import { z } from "zod";
+import { logEvent } from "@/lib/server/log";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/shared/config";
 
@@ -18,7 +19,11 @@ export async function sendMagicLinkAction(_prev: LoginState, form: FormData): Pr
     email: email.data,
     options: { emailRedirectTo: `${origin}/auth/callback`, shouldCreateUser: true },
   });
-  if (error) return { status: "error", message: "ارسال لینک انجام نشد. چند دقیقه بعد دوباره امتحان کن.", email: email.data };
+  if (error) {
+    void logEvent({ kind: "system", level: "warn", event: "auth.link_failed", actor_email: email.data, message: error.message });
+    return { status: "error", message: "ارسال لینک انجام نشد. چند دقیقه بعد دوباره امتحان کن.", email: email.data };
+  }
+  void logEvent({ kind: "activity", event: "auth.link_sent", actor_email: email.data });
   return { status: "sent", email: email.data };
 }
 

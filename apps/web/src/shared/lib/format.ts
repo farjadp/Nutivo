@@ -22,3 +22,23 @@ export function addDays(isoDate: string, delta: number): string {
   d.setUTCDate(d.getUTCDate() + delta);
   return d.toISOString().slice(0, 10);
 }
+
+const dtFmt = new Intl.DateTimeFormat("fa-IR-u-ca-gregory", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+const rtf = new Intl.RelativeTimeFormat("fa", { numeric: "auto" });
+
+/** «۲۰ اکتبر ۲۰۲۶، ۱۳:۰۵» */
+export function faDateTime(iso: string | null | undefined): string {
+  return iso ? dtFmt.format(new Date(iso)) : "—";
+}
+
+/** «۳ ساعت پیش» relative to now. */
+export function faAgo(iso: string | null | undefined, now = Date.now()): string {
+  if (!iso) return "—";
+  const s = Math.round((new Date(iso).getTime() - now) / 1000);
+  const abs = Math.abs(s);
+  if (abs < 60) return rtf.format(s, "second");
+  if (abs < 3600) return rtf.format(Math.round(s / 60), "minute");
+  if (abs < 86400) return rtf.format(Math.round(s / 3600), "hour");
+  if (abs < 86400 * 30) return rtf.format(Math.round(s / 86400), "day");
+  return dtFmt.format(new Date(iso));
+}

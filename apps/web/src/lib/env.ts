@@ -4,7 +4,7 @@ const serverSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
-  ANTHROPIC_API_KEY: z.string().min(1),
+  ANTHROPIC_API_KEY: z.string().optional(),
   NUTIVO_EXTRACT_MODEL: z.string().default("claude-sonnet-5-5"),
   NUTIVO_REPORT_MODEL: z.string().default("claude-sonnet-5-5"),
   NUTIVO_REPORT_HOUR_LOCAL: z.coerce.number().int().min(0).max(23).default(21),

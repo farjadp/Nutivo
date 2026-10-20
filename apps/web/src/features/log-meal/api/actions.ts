@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { foodFromRow } from "@/entities/food/map";
 import { createClient } from "@/lib/supabase/server";
-import { isAiConfigured, isAuthDisabled, isSupabaseConfigured, PHOTO_MAX_BYTES, PHOTO_TYPES } from "@/shared/config";
+import { anthropicKey } from "@/lib/ai/client";
+import { logEvent } from "@/lib/server/log";
+import { isAuthDisabled, isSupabaseConfigured, PHOTO_MAX_BYTES, PHOTO_TYPES } from "@/shared/config";
 import type { ActionResult, Draft } from "../model/draft";
 import { ExtractError, extractMeal } from "./extract.server";
 import { resolveMeal } from "./resolve.server";
@@ -21,7 +23,7 @@ async function requireUser() {
 /** Text or photo → draft items for the confirm screen. Nothing is saved except the photo. */
 export async function draftMealAction(form: FormData): Promise<ActionResult<Draft>> {
   if (!isSupabaseConfigured()) return { ok: false, error: NOT_READY };
-  if (!isAiConfigured()) return { ok: false, error: "کلید Claude تنظیم نشده (ANTHROPIC_API_KEY در apps/web/.env.local)." };
+  if (!(await anthropicKey())) return { ok: false, error: "کلید Claude تنظیم نشده. از پنل ادمین (تنظیمات) یا ANTHROPIC_API_KEY واردش کن." };
   const local = isAuthDisabled();
   const { supabase, user } = await requireUser();
   if (!user && !local) return { ok: false, error: "برای ثبت باید وارد حساب شوی." };
@@ -52,9 +54,27 @@ export async function draftMealAction(form: FormData): Promise<ActionResult<Draf
       photo_preview_url = signed.data?.signedUrl ?? null;
     }
 
-    const parsed = await extractMeal({ text, image, nowISO });
+    const ex = await extractMeal({ text, image, nowISO });
+    const parsed = ex.meal;
     const resolved = await resolveMeal(supabase, parsed);
     const question = resolved.items.find((i) => i.question)?.question;
+    void logEvent({
+      kind: "system",
+      event: "ai.extract",
+      actor_id: user?.id ?? null,
+      actor_email: user?.email ?? (local ? "review-mode" : null),
+      message: `${image ? "photo" : "text"} → ${parsed.items.length} items`,
+      meta: {
+        model: ex.model,
+        ms: ex.ms,
+        input_tokens: ex.usage.input_tokens,
+        output_tokens: ex.usage.output_tokens,
+        input: image ? "photo" : "text",
+        items: parsed.items.length,
+        unmatched: resolved.items.filter((i) => !i.food_id).length,
+        questions: resolved.items.filter((i) => i.question).length,
+      },
+    });
 
     return {
       ok: true,
@@ -72,8 +92,16 @@ export async function draftMealAction(form: FormData): Promise<ActionResult<Draf
       },
     };
   } catch (err) {
+    void logEvent({
+      kind: "system",
+      level: err instanceof ExtractError ? "warn" : "error",
+      event: "ai.extract_failed",
+      actor_id: user?.id ?? null,
+      actor_email: user?.email ?? (local ? "review-mode" : null),
+      message: err instanceof Error ? err.message : String(err),
+      meta: { input: photo instanceof File && photo.size > 0 ? "photo" : "text", cause: err instanceof Error && err.cause ? String(err.cause) : undefined },
+    });
     if (err instanceof ExtractError) return { ok: false, error: err.userMessage };
-    console.error("draftMealAction", err);
     return { ok: false, error: "یک مشکلی پیش آمد. دوباره تلاش کن." };
   }
 }
@@ -154,8 +182,18 @@ export async function confirmMealAction(input: ConfirmInput): Promise<ActionResu
   const { error: iErr } = await supabase.from("entry_items").insert(items);
   if (iErr) {
     await supabase.from("meal_entries").delete().eq("id", entry.id);
+    void logEvent({ kind: "system", level: "error", event: "meal.save_failed", actor_id: user.id, actor_email: user.email, entity: "meal_entry", entity_id: entry.id, message: iErr.message });
     return { ok: false, error: "ذخیره آیتم‌ها انجام نشد." };
   }
+  void logEvent({
+    kind: "activity",
+    event: "meal.items_saved",
+    actor_id: user.id,
+    actor_email: user.email,
+    entity: "meal_entry",
+    entity_id: entry.id,
+    meta: { items: items.length, kcal: Math.round(items.reduce((a, i) => a + i.kcal, 0)), estimated: items.some((i) => i.is_estimated) },
+  });
 
   revalidatePath("/today");
   return { ok: true, data: { entry_id: entry.id } };

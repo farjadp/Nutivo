@@ -9,8 +9,7 @@ import {
   ParsedMealSchema,
   type ParsedMeal,
 } from "@nutivo/core";
-import { anthropic } from "@/lib/ai/client";
-import { env } from "@/lib/env";
+import { anthropic, extractModel } from "@/lib/ai/client";
 
 export class ExtractError extends Error {
   constructor(readonly userMessage: string, cause?: unknown) {
@@ -22,7 +21,14 @@ export class ExtractError extends Error {
 type ImageInput = { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" };
 
 /** Asks Claude to turn text or a photo into items. Returns structure only; no nutrition numbers. */
-export async function extractMeal(input: { text?: string; image?: ImageInput; nowISO: string }): Promise<ParsedMeal> {
+export interface ExtractResult {
+  meal: ParsedMeal;
+  model: string;
+  ms: number;
+  usage: { input_tokens: number; output_tokens: number };
+}
+
+export async function extractMeal(input: { text?: string; image?: ImageInput; nowISO: string }): Promise<ExtractResult> {
   const content: Anthropic.ContentBlockParam[] = [];
   if (input.image) {
     content.push({ type: "image", source: { type: "base64", media_type: input.image.mediaType, data: input.image.base64 } });
@@ -34,9 +40,12 @@ export async function extractMeal(input: { text?: string; image?: ImageInput; no
   }
 
   let res: Anthropic.Message;
+  const model = await extractModel();
+  const t0 = Date.now();
   try {
-    res = await anthropic().messages.create({
-      model: env().NUTIVO_EXTRACT_MODEL,
+    const client = await anthropic();
+    res = await client.messages.create({
+      model,
       max_tokens: 1024,
       system: EXTRACT_SYSTEM_PROMPT,
       tools: [extractMealTool as unknown as Anthropic.Tool],
@@ -54,5 +63,10 @@ export async function extractMeal(input: { text?: string; image?: ImageInput; no
   if (!parsed.success) throw new ExtractError("پاسخ سرویس قابل خواندن نبود. دوباره امتحان کن.", parsed.error);
   if (parsed.data.items.length === 0) throw new ExtractError("غذایی پیدا نکردم. مثلاً بنویس «دو کفگیر برنج و یک تکه مرغ».");
   if (input.image) parsed.data.items.forEach((i) => (i.from_photo = true));
-  return parsed.data;
+  return {
+    meal: parsed.data,
+    model,
+    ms: Date.now() - t0,
+    usage: { input_tokens: res.usage.input_tokens, output_tokens: res.usage.output_tokens },
+  };
 }
