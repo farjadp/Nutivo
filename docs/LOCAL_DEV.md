@@ -7,6 +7,7 @@
 pnpm install
 pnpm db:start      # Postgres + Auth + Storage در Docker (پورت‌های 56xxx)
 pnpm db:demo       # ۳۴ کاربر نمونه با دو هفته وعده و لاگ
+pnpm db:figfit     # اختیاری: ~۱۱ هزار غذای فارسی FigFit (غیرتجاری، فقط لوکال؛ CSVها را در packages/db/seed/external/figfit بگذار)
 pnpm dev           # اپ روی http://localhost:3000
 ```
 
@@ -26,6 +27,7 @@ pnpm dev           # اپ روی http://localhost:3000
 - `pnpm db:reset` همه داده را پاک می‌کند، مهاجرت‌ها و seed را دوباره اجرا می‌کند. بعدش `pnpm db:demo`.
 - `pnpm db:stop` استک را خاموش می‌کند؛ داده‌ها در volume داکر می‌مانند.
 - `pnpm db:status` کلیدها و آدرس‌ها را نشان می‌دهد.
+- بعد از `pnpm db:reset`، اگر FigFit می‌خواهی دوباره `pnpm db:figfit` بزن.
 - فقط یک `pnpm dev` در هر لحظه. دو نسخه همزمان پوشه `.next` را خراب می‌کنند (اسکریپت روی پورت ۳۰۰۰ قفل است).
 
 ## ورود

@@ -13,7 +13,8 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:status": "supabase status",
-    "db:demo": "node scripts/demo-data.mjs"
+    "db:demo": "node scripts/demo-data.mjs",
+    "db:figfit": "node scripts/import-figfit.mjs"
   },
   "devDependencies": {
     "@supabase/supabase-js": "2.58.0",

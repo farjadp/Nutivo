@@ -1,9 +1,8 @@
 import "server-only";
 import type Anthropic from "@anthropic-ai/sdk";
 import {
+  EXTRACT_OUTPUT_SCHEMA,
   EXTRACT_SYSTEM_PROMPT,
-  EXTRACT_TOOL_NAME,
-  extractMealTool,
   extractPromptForPhoto,
   extractPromptForText,
   ParsedMealSchema,
@@ -44,22 +43,31 @@ export async function extractMeal(input: { text?: string; image?: ImageInput; no
   const t0 = Date.now();
   try {
     const client = await anthropic();
+    // Structured outputs: current models reject forced tool_choice, so the reply is schema-constrained JSON.
+    // Extraction is a simple, latency-sensitive step, so effort stays low.
     res = await client.messages.create({
       model,
-      max_tokens: 1024,
+      max_tokens: 4096,
       system: EXTRACT_SYSTEM_PROMPT,
-      tools: [extractMealTool as unknown as Anthropic.Tool],
-      tool_choice: { type: "tool", name: EXTRACT_TOOL_NAME },
+      output_config: { effort: "low", format: { type: "json_schema", schema: EXTRACT_OUTPUT_SCHEMA } },
       messages: [{ role: "user", content }],
     });
   } catch (err) {
     throw new ExtractError("ارتباط با سرویس هوش مصنوعی برقرار نشد. چند لحظه بعد دوباره امتحان کن.", err);
   }
 
-  const call = res.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use" && b.name === EXTRACT_TOOL_NAME);
-  if (!call) throw new ExtractError("نتوانستم غذاها را تشخیص بدهم. کمی دقیق‌تر بنویس.");
+  if (res.stop_reason === "refusal") throw new ExtractError("این ورودی را نمی‌توانم بخوانم. فقط غذاها را بنویس.");
+  if (res.stop_reason === "max_tokens") throw new ExtractError("فهرست خیلی طولانی بود. در چند وعده جدا بنویس.");
+  const text = res.content.find((b): b is Anthropic.TextBlock => b.type === "text")?.text;
+  if (!text) throw new ExtractError("نتوانستم غذاها را تشخیص بدهم. کمی دقیق‌تر بنویس.");
 
-  const parsed = ParsedMealSchema.safeParse(call.input);
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch (err) {
+    throw new ExtractError("پاسخ سرویس قابل خواندن نبود. دوباره امتحان کن.", err);
+  }
+  const parsed = ParsedMealSchema.safeParse(json);
   if (!parsed.success) throw new ExtractError("پاسخ سرویس قابل خواندن نبود. دوباره امتحان کن.", parsed.error);
   if (parsed.data.items.length === 0) throw new ExtractError("غذایی پیدا نکردم. مثلاً بنویس «دو کفگیر برنج و یک تکه مرغ».");
   if (input.image) parsed.data.items.forEach((i) => (i.from_photo = true));

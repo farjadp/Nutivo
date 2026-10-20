@@ -2,6 +2,7 @@ import "server-only";
 import { normalizeFa, toGrams, UnitResolutionError, type Food, type ParsedMeal, type PortionUnit } from "@nutivo/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { foodFromRow, unitFromRow } from "@/entities/food/map";
+import { excludedFoodSources } from "@/shared/config";
 import type { DraftItem } from "../model/draft";
 
 const MATCH_THRESHOLD = 0.35;
@@ -24,7 +25,7 @@ export async function resolveMeal(supabase: SupabaseClient, meal: ParsedMeal) {
     meal.items.map(async (it) => {
       const base = searchTerm(it.name_raw, it.unit) || normalizeFa(it.name_raw);
       const q = it.prep_hint && PREP_WORDS[it.prep_hint] && !base.includes(PREP_WORDS[it.prep_hint]!) ? `${base} ${PREP_WORDS[it.prep_hint]}` : base;
-      const { data, error } = await supabase.rpc("search_foods", { q, lim: 5 });
+      const { data, error } = await supabase.rpc("search_foods", { q, lim: 5, exclude_sources: excludedFoodSources() });
       if (error) throw new Error(`search_foods failed: ${error.message}`);
       const hits = (data ?? []) as { id: string; score: number }[];
       return { it, hits };

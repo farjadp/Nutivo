@@ -12,7 +12,8 @@
     "db:stop": "pnpm --filter @nutivo/db db:stop",
     "db:reset": "pnpm --filter @nutivo/db db:reset",
     "db:demo": "pnpm --filter @nutivo/db db:demo",
-    "db:status": "pnpm --filter @nutivo/db db:status"
+    "db:status": "pnpm --filter @nutivo/db db:status",
+    "db:figfit": "pnpm --filter @nutivo/db db:figfit"
   },
   "devDependencies": {
     "typescript": "^5.9.2"

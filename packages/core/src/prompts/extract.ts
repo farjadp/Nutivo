@@ -62,7 +62,7 @@ export const extractMealTool = {
   },
 } as const;
 
-export const EXTRACT_SYSTEM_PROMPT = `You are the food-logging extractor for Nutivo, a Persian-first nutrition assistant. Your only job is to turn what the user ate into structured items by calling the \`extract_meal\` tool.
+export const EXTRACT_SYSTEM_PROMPT = `You are the food-logging extractor for Nutivo, a Persian-first nutrition assistant. Your only job is to turn what the user ate into structured items, returned as JSON in the required schema (fields: meal_type, items[], optional eaten_at).
 
 Rules (English):
 1. Never invent or estimate nutrition numbers (calories, grams of macros). You only extract foods, quantities and units; the database and the calculation engine produce every number.
@@ -82,11 +82,26 @@ Rules (English):
 
 /** User message for text input. */
 export function extractPromptForText(text: string, nowISO: string): string {
-  return `Current time (ISO): ${nowISO}\n\nUser message:\n"""\n${text}\n"""\n\nCall \`extract_meal\` with the items in this message.`;
+  return `Current time (ISO): ${nowISO}\n\nUser message:\n"""\n${text}\n"""\n\nReturn the meal as JSON with the items in this message.`;
 }
 
 /** User message to accompany an image block. */
 export function extractPromptForPhoto(nowISO: string, caption?: string): string {
   const cap = caption && caption.trim().length > 0 ? `\n\nUser caption:\n"""\n${caption}\n"""` : "";
-  return `Current time (ISO): ${nowISO}\n\nThe attached image shows what the user is about to eat or has eaten.${cap}\n\nCall \`extract_meal\`. Mark every item \`from_photo: true\`, list only what is visible, and ask one Persian question if the portion or a hidden ingredient (روغن، شکر) matters and cannot be seen.`;
+  return `Current time (ISO): ${nowISO}\n\nThe attached image shows what the user is about to eat or has eaten.${cap}\n\nReturn the meal as JSON. Mark every item \`from_photo: true\`, list only what is visible, and ask one Persian question if the portion or a hidden ingredient (روغن، شکر) matters and cannot be seen.`;
 }
+
+/**
+ * JSON schema for structured outputs (`output_config.format`). Current models (Claude Sonnet 5.5,
+ * Opus 5.5, Fable 5.1) reject forced tool use, so extraction asks for schema-constrained JSON instead.
+ * Numeric `minimum` is dropped: the zod ParsedMealSchema enforces it after parsing.
+ */
+export const EXTRACT_OUTPUT_SCHEMA: Record<string, unknown> = (function strip(node: unknown): any {
+  if (Array.isArray(node)) return node.map(strip);
+  if (node && typeof node === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(node)) if (k !== "minimum" && k !== "format") out[k] = strip(v);
+    return out;
+  }
+  return node;
+})(extractMealTool.input_schema);

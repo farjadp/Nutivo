@@ -14,3 +14,16 @@ export const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 export function isAuthDisabled(): boolean {
   return process.env.NUTIVO_AUTH_DISABLED === "true" && process.env.NODE_ENV !== "production";
 }
+
+/**
+ * FigFit food database (CC BY-NC-SA 4.0): non-commercial use only, so it is searchable
+ * only when NUTIVO_FIGFIT=on and never in production builds.
+ */
+export function isFigfitEnabled(): boolean {
+  return process.env.NUTIVO_FIGFIT === "on" && process.env.NODE_ENV !== "production";
+}
+
+/** Food sources excluded from search for this deployment. */
+export function excludedFoodSources(): string[] {
+  return isFigfitEnabled() ? [] : ["figfit"];
+}

@@ -4,7 +4,8 @@ import { PageHeader, Panel } from "@/features/admin/ui/bits";
 import { ProviderCard, ValueField, type ProviderView } from "@/features/admin/ui/settings-forms";
 import { canEncrypt, last4 } from "@/lib/server/secrets";
 import { listSettingsMasked, SETTING_KEYS } from "@/lib/server/settings";
-import { isAuthDisabled } from "@/shared/config";
+import { adminClient } from "@/lib/supabase/admin";
+import { isAuthDisabled, isFigfitEnabled } from "@/shared/config";
 
 export default async function SettingsPage() {
   const ctx = await requireAdmin();
@@ -32,6 +33,12 @@ export default async function SettingsPage() {
     provider("openai", "OpenAI", SETTING_KEYS.openaiKey, "OPENAI_API_KEY", "برای تبدیل صدا به متن (ثبت صوتی، نسخه ۱.۵). فعلاً اختیاری.", "sk-…", "https://platform.openai.com/api-keys"),
     provider("google", "Google Gemini", SETTING_KEYS.googleKey, "GOOGLE_API_KEY", "پشتیبان یا مقایسه کیفیت تشخیص عکس. فعلاً اختیاری.", "AIza…", "https://aistudio.google.com/apikey"),
   ];
+
+  let figfitRows: number | null = null;
+  if (ctx.live) {
+    const { count } = await adminClient().from("foods").select("id", { count: "exact", head: true }).eq("source", "figfit");
+    figfitRows = count ?? 0;
+  }
 
   const value = (k: string, fallback: string) => String(get(k)?.value ?? fallback);
   const health = [
@@ -64,6 +71,22 @@ export default async function SettingsPage() {
         {providers.map((p) => <ProviderCard key={p.id} p={p} live={ctx.live} />)}
       </div>
       <p className="mt-2 text-xs text-ink-2">ترتیب استفاده: کلید ذخیره‌شده در پنل، سپس متغیر محیطی. حذف کلید از پنل، اپ را به کلید env برمی‌گرداند.</p>
+
+      <h2 className="mb-3 mt-6 text-lg font-semibold">منابع داده غذا</h2>
+      <Panel>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="max-w-2xl">
+            <p className="text-sm font-semibold"><span dir="ltr" className="font-[family-name:var(--font-en)]">FigFit food database</span></p>
+            <p className="mt-1 text-xs leading-6 text-ink-2">
+              حدود ۱۱ هزار غذای فارسی با واحدهای محلی. مجوز <span dir="ltr">CC BY-NC-SA 4.0</span>: فقط استفاده غیرتجاری. روی این سیستم فقط برای استفاده شخصی و لوکال فعال است و در نسخه production همیشه خاموش است. غذاهای بازبینی‌شده خودمان در جست‌وجو همیشه جلوترند. حذف کامل: <code dir="ltr">pnpm db:figfit --remove</code>
+            </p>
+          </div>
+          <div className="text-left text-xs">
+            <p className={isFigfitEnabled() ? "font-semibold text-success" : "font-semibold text-ink-2"}>{isFigfitEnabled() ? "در جست‌وجو فعال" : "در جست‌وجو خاموش"}</p>
+            <p className="tabular mt-1 text-ink-2">{figfitRows === null ? "—" : `${figfitRows.toLocaleString("fa-IR")} ردیف بارگذاری‌شده`}</p>
+          </div>
+        </div>
+      </Panel>
 
       <h2 className="mb-3 mt-6 text-lg font-semibold">مدل‌ها و زمان‌بندی</h2>
       <Panel>

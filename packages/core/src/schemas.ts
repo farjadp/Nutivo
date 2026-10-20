@@ -10,7 +10,7 @@ export const MacroSchema = z.object({
 });
 export type Macro = z.infer<typeof MacroSchema>;
 
-export const FoodSourceSchema = z.enum(["fa_manual", "usda", "off"]);
+export const FoodSourceSchema = z.enum(["fa_manual", "usda", "off", "figfit"]);
 export type FoodSource = z.infer<typeof FoodSourceSchema>;
 
 export const FoodStateSchema = z.enum(["raw", "cooked", "as_served"]);

@@ -57,6 +57,8 @@ Implementation notes (measured 2026-10-20, to resolve in DESIGN.md):
 
 ## Evidence on Hand
 
+FigFit food database (Kaggle, CC BY-NC-SA 4.0): ~11k Persian foods loaded locally for the founder's personal, non-commercial use only; off in production; must be removed or licensed before any commercial use (packages/db/seed/README.md).
+
 Founder's own nightly-report prompt (the original spec, in PLAN.md's history). Sketch artifact with five wireframes. No user data, testimonials, or nutrition dataset yet. Do not fabricate reviews, user counts, or clinical claims.
 
 ## Product Principles

@@ -6,7 +6,7 @@ export const FoodRowSchema = z.object({
   id: z.string(),
   name_fa: z.string(),
   name_en: z.string(),
-  source: z.enum(["fa_manual", "usda", "off"]),
+  source: z.enum(["fa_manual", "usda", "off", "figfit"]),
   kcal_100g: z.coerce.number(),
   protein_100g: z.coerce.number(),
   carbs_100g: z.coerce.number(),

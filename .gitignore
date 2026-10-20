@@ -8,3 +8,6 @@ dist
 .impeccable/config.local.json
 .impeccable/mocks
 .impeccable/questions
+
+# Third-party datasets with non-commercial licences: local use only, never commit
+packages/db/seed/external/
