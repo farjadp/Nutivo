@@ -57,13 +57,18 @@ async function removeOldDemoUsers() {
     const { data, error } = await db.auth.admin.listUsers({ page, perPage: 200 });
     if (error) throw error;
     const demo = data.users.filter((u) => u.email?.endsWith(`@${DOMAIN}`));
-    for (const u of demo) await db.auth.admin.deleteUser(u.id);
+    for (const u of demo) {
+      const { error: dErr } = await db.auth.admin.deleteUser(u.id);
+      if (dErr) throw new Error(`could not remove old demo user ${u.email}: ${dErr.message}`);
+    }
     if (data.users.length < 200) break;
   }
 }
 
 async function main() {
   await removeOldDemoUsers();
+  // Logs from previous demo runs outlive their users (by design); clear them so stats stay honest.
+  await db.from('activity_log').delete().like('actor_email', `%@${DOMAIN}`);
   const now = Date.now();
   let meals = 0;
   for (let i = 0; i < NAMES.length; i++) {
