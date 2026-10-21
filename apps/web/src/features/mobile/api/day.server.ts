@@ -1,5 +1,5 @@
 import "server-only";
-import { macrosForGrams, roundMacro, toGrams, UnitResolutionError, type AppDay, type BotResult } from "@nutivo/core";
+import { macrosForGrams, roundMacro, toGrams, UnitResolutionError, type AppDay, type AppItem, type BotResult, type MealType } from "@nutivo/core";
 import { foodFromRow, unitFromRow } from "@/entities/food/map";
 import { dayView, type Linked } from "@/features/bot/api/service.server";
 import { loadDayFor } from "@/features/today/api/load-day.server";
@@ -48,6 +48,32 @@ async function ownedItem(userId: string, itemId: string) {
   const { data: unitRows } = await db().from("portion_units").select("*").eq("food_id", data.food_id);
   const entry = data.meal_entries as unknown as { input_channel: string; photo_path: string | null };
   return { row: data, food: foodFromRow(data.foods), units: (unitRows ?? []).map(unitFromRow), fromPhoto: entry.input_channel === "web_photo" || Boolean(entry.photo_path) };
+}
+
+/** One saved item for the edit sheet, by id, or null when it is not this user's. */
+export async function itemById(user: Linked, itemId: string): Promise<AppItem | null> {
+  const { data } = await db()
+    .from("entry_items")
+    .select("id, name_raw, qty, unit, grams, kcal, protein_g, is_estimated, food_id, foods(name_fa), meal_entries!inner(user_id, meal_type)")
+    .eq("id", itemId)
+    .eq("meal_entries.user_id", user.userId)
+    .maybeSingle();
+  if (!data) return null;
+  const food = data.foods as unknown as { name_fa: string } | null;
+  const entry = data.meal_entries as unknown as { meal_type: MealType };
+  return {
+    id: data.id as string,
+    meal_type: entry.meal_type,
+    name: food?.name_fa ?? String(data.name_raw),
+    said: String(data.name_raw),
+    food_id: String(data.food_id),
+    qty: Number(data.qty),
+    unit: String(data.unit),
+    grams: Math.round(Number(data.grams)),
+    kcal: Math.round(Number(data.kcal)),
+    protein_g: Math.round(Number(data.protein_g)),
+    estimated: Boolean(data.is_estimated),
+  };
 }
 
 export type ItemChange = { qty: number; unit: string } | { grams: number };

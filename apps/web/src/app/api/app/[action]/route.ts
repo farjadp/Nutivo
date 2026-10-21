@@ -13,7 +13,7 @@ import {
   type Linked,
 } from "@/features/bot/api/service.server";
 import type { BotResult } from "@nutivo/core";
-import { dayDetail, deleteItem, foodUnits, updateItem } from "@/features/mobile/api/day.server";
+import { dayDetail, deleteItem, foodUnits, itemById, updateItem } from "@/features/mobile/api/day.server";
 import { logEvent } from "@/lib/server/log";
 import { adminClient, isAdminConfigured } from "@/lib/supabase/admin";
 
@@ -60,6 +60,7 @@ const Bodies = {
     change: z.union([z.object({ qty: z.number().positive().max(10000), unit: z.string().min(1).max(40) }), z.object({ grams: z.number().positive().max(5000) })]),
   }),
   item_delete: Id,
+  item: Id,
   units: z.object({ food_id: z.string().min(1).max(80) }),
   repeat: z.object({ id: z.string().max(400), now: Iso }),
   report: Day,
@@ -137,6 +138,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
       case "item_update": {
         const b = parsed.data as z.infer<(typeof Bodies)["item_update"]>;
         return json(await updateItem(user, b.id, b.change));
+      }
+      case "item": {
+        const it = await itemById(user, (parsed.data as z.infer<typeof Id>).id);
+        return json(it ? { ok: true, data: it } : { ok: false, error: "این غذا دیگر در دفترت نیست.", code: "not_found" });
       }
       case "item_delete":
         return json(await deleteItem(user, (parsed.data as z.infer<typeof Id>).id));
