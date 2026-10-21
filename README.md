@@ -8,8 +8,7 @@
 <h3 align="center">Eat Smarter. Live Better.</h3>
 
 <p align="center">
-  A Persian-first nutrition companion. Log a meal in a sentence or a photo, in Persian,<br>
-  and get real numbers from an Iranian food table, not from a language model.
+  A Persian-first nutrition companion. Log a meal in a sentence or a photo, in Persian, and get real numbers from an Iranian food table, not from a language model.
 </p>
 
 <p align="center">
@@ -175,7 +174,7 @@ Built by [Farjad P.D](https://farjadp.com) with Claude Code. Nutrition data from
 - **«بپرس»**: به «شام چی بخورم؟» با توجه به باقی‌مانده بودجه امروز پیشنهاد می‌دهد.
 - **گزارش شبانه**: واقعیت‌های روز از موتور محاسبه، تحلیل کوتاهی که Claude فقط از روی همان عددها می‌نویسد، و محافظی که هر عددی را که موتور تولید نکرده رد می‌کند.
 - **نوتی**: دختربچه‌ای شیطون و بامزه که بینش‌های نوتیوو را می‌گوید. هیچ‌وقت درباره وزن و هیکل حرف نمی‌زند، سرزنش نمی‌کند و می‌شود خاموشش کرد.
-- **بات تلگرام** ([@NUTIVO_bot](https://t.me/NUTIVO_bot)): شروع، ثبت با متن و عکس، کارت امروز، تکرار وعده و گزارش شبانه داخل چت.
+- **بات تلگرام** (<a href="https://t.me/NUTIVO_bot"><span dir="ltr">@NUTIVO_bot</span></a>): شروع، ثبت با متن و عکس، کارت امروز، تکرار وعده و گزارش شبانه داخل چت.
 - **اپ iOS و اندروید** (Expo): ورود با کد ایمیلی، تب‌های امروز، ثبت، گزارش، بپرس و «من»، یادآوری وعده‌ها و اعلان گزارش شبانه.
 - **پنل ادمین**: کاربران، لاگ فعالیت و سیستم، ماندگاری روز ۱ و ۷ و ۳۰، تعداد دفعات ثبت، هزینه هوش مصنوعی و تنظیمات رمزشده کلیدها.
 
