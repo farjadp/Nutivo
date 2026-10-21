@@ -12,3 +12,4 @@ export * from "./ideas";
 export * from "./prompts/ask";
 export * from "./bot";
 export * from "./mascot";
+export * from "./auth";
