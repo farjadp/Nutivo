@@ -1,6 +1,7 @@
-import { ChevronLeft, Globe, MessageCircle, Phone, Shield, Target } from "lucide-react";
+import { ChevronLeft, Globe, LogOut, MessageCircle, Phone, Shield, Target } from "lucide-react";
 import Link from "next/link";
 import { DeleteAccount } from "@/features/account/ui/delete-account";
+import { signOutAction } from "@/features/auth/actions";
 import { BottomNav } from "@/features/today/ui/bottom-nav";
 import { NutiToggle } from "@/features/mascot/ui/nuti-toggle";
 import { TelegramLink } from "@/features/bot/ui/telegram-link";
@@ -109,7 +110,16 @@ export default async function MePage() {
 
         {me && (
           <div className="mt-6 overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-soft)]">
-            <DeleteAccount email={me.email} />
+            {/* Ends the session in this browser only (shared or family computers). */}
+            <form action={signOutAction}>
+              <button type="submit" className="flex w-full items-center gap-3 px-4 py-3.5 text-start hover:bg-track">
+                <span className="grid size-9 place-items-center rounded-full bg-error/10 text-error"><LogOut size={17} strokeWidth={2} aria-hidden /></span>
+                <span className="flex-1 text-[15px] font-semibold text-error">خروج از حساب</span>
+              </button>
+            </form>
+            <div className="border-t border-line">
+              <DeleteAccount email={me.email} />
+            </div>
           </div>
         )}
       </main>

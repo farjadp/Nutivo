@@ -5,9 +5,9 @@ import { Logo } from "@/shared/ui/logo";
 
 export const metadata = { title: "ورود · Nutivo" };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ deleted?: string }> }) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ deleted?: string; error?: string }> }) {
   if (isAuthDisabled()) redirect("/today");
-  const { deleted } = await searchParams;
+  const { deleted, error } = await searchParams;
   return (
     <main className="mx-auto grid min-h-dvh max-w-sm content-center gap-8 px-4 py-10">
       <header className="grid gap-2">
@@ -20,7 +20,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           حسابت حذف شد و همه داده‌هایش پاک شد. هر وقت خواستی با یک ایمیل دوباره شروع کن.
         </p>
       )}
-      <LoginForm />
+      <LoginForm linkExpired={error === "link"} />
     </main>
   );
 }
