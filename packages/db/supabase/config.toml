@@ -446,3 +446,18 @@ max_client_conn = 200
 [remotes.production.storage.analytics]
 enabled = true
 max_namespaces = 10
+
+# Sign-in emails go through Resend (domain mail.farjadp.info, verified in Resend). Production only: the local
+# stack keeps Mailpit. The API key is never in the repo; `config push` reads it from the environment.
+[remotes.production.auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(NUTIVO_RESEND_API_KEY)"
+admin_email = "noreply@mail.farjadp.info"
+sender_name = "Nutivo"
+
+# Up to 60 sign-in emails an hour across all users (the local value of 2 would lock testers out).
+[remotes.production.auth.rate_limit]
+email_sent = 60
