@@ -13,11 +13,14 @@ const Schema = z.object({
   goal: z.enum(["lose", "maintain", "gain"]),
   timezone: z.string().min(1).max(64),
 });
+// Where to land after saving: only known in-app pages, never a URL taken from the form as is.
+const ReturnTo = z.enum(["/today", "/me"]).catch("/today");
 
 export type OnboardingState = { error?: string };
 
 export async function saveProfileAction(_prev: OnboardingState, form: FormData): Promise<OnboardingState> {
-  const parsed = Schema.safeParse(Object.fromEntries(form));
+  const { return_to, ...fields } = Object.fromEntries(form);
+  const parsed = Schema.safeParse(fields);
   if (!parsed.success) return { error: "همه فیلدها را با عدد درست پر کن." };
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -34,5 +37,5 @@ export async function saveProfileAction(_prev: OnboardingState, form: FormData):
     goal_fat_g: g.fat_g,
   });
   if (error) return { error: "ذخیره پروفایل انجام نشد. دوباره امتحان کن." };
-  redirect("/today");
+  redirect(ReturnTo.parse(return_to));
 }

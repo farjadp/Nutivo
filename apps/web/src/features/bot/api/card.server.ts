@@ -70,12 +70,13 @@ function macroRow(y: number, label: string, consumed: number, goal: number, colo
   ${t(960, y + 80, consumed <= goal ? `${n(goal - consumed)} گرم مانده` : `${n(consumed - goal)} گرم بیشتر از هدف`, 26, { fill: ink })}`;
 }
 
-export function dayCardSvg(day: DayView, opts: { name?: string } = {}): string {
+/** `nuti: false` leaves the mascot out (the user switched نوتی off). */
+export function dayCardSvg(day: DayView, opts: { name?: string; nuti?: boolean } = {}): string {
   const W = 1080, H = 1440;
   const over = day.remaining.kcal < 0;
   const ratio = day.goals.kcal > 0 ? day.totals.kcal / day.goals.kcal : 0;
   const mood: NutiMood = day.complete ? "cheer" : day.meals.length === 0 ? "sleepy" : over ? "think" : "happy";
-  const nuti = NUTI_SVG[mood].replace('width="120" height="120"', 'width="150" height="150"').replace("<svg ", '<svg x="70" y="40" ');
+  const nuti = opts.nuti === false ? "" : NUTI_SVG[mood].replace('width="120" height="120"', 'width="150" height="150"').replace("<svg ", '<svg x="70" y="40" ');
   const title = day.date === day.today ? "امروز" : dayFmt.format(new Date(`${day.date}T12:00:00`)).split(" ")[0]!;
 
   const meals = day.meals.slice(0, 4).map((m, i) => {

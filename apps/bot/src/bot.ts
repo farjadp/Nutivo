@@ -161,7 +161,7 @@ export function createBot(token: string, deps: BotDeps): Bot {
     const payload = ctx.match?.trim();
     if (payload?.startsWith("link_")) {
       const r = await api.link(u, c, payload.slice(5));
-      return ctx.reply(r.ok ? "حساب وب به این چت وصل شد. حالا هر چی بنویسی همان‌جا هم دیده می‌شود." : r.error);
+      return ctx.reply(r.ok ? "حساب Nutivo به این چت وصل شد. حالا هر چی اینجا ثبت کنی، در اپ و وب هم دیده می‌شود." : r.error);
     }
     const reg = await api.register(u, c);
     if (!reg.ok) return ctx.reply(reg.error);
@@ -176,9 +176,9 @@ export function createBot(token: string, deps: BotDeps): Bot {
   bot.command("link", async (ctx) => {
     const { u, c } = ids(ctx);
     const code = ctx.match?.trim();
-    if (!code) return ctx.reply("کد را از صفحه «من» در وب بگیر و این‌طور بفرست: /link ABC123");
+    if (!code) return ctx.reply("کد را از «من › بات تلگرام» در اپ یا وب بگیر و این‌طور بفرست: /link ABC123");
     const r = await api.link(u, c, code);
-    await ctx.reply(r.ok ? "حساب وب به این چت وصل شد." : r.error);
+    await ctx.reply(r.ok ? "حساب Nutivo به این چت وصل شد." : r.error);
   });
 
   // --- buttons --------------------------------------------------------------

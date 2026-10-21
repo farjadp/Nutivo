@@ -23,6 +23,7 @@ import { readReport, storeReport, writeAnalysis } from "@/features/report/api/re
 import { itemsHash } from "@/features/report/model/hash";
 import { buildDailyReport, reportFacts, type ReportView } from "@nutivo/core";
 import { faDayWord } from "@/shared/lib/format";
+import { nutiEnabledFor } from "@/features/account/api/account.server";
 import { logEvent } from "@/lib/server/log";
 import { dayCardSvg, renderPng } from "./card.server";
 import { adminClient } from "@/lib/supabase/admin";
@@ -353,9 +354,9 @@ export async function addRepeat(user: Linked, repeatId: string, nowUtc: string):
 
 /** The «امروز» PNG card plus the numbers behind it. */
 export async function dayCard(user: Linked, date?: string): Promise<{ png: Buffer; day: DayView } | null> {
-  const day = await dayView(user, date);
+  const [day, nuti] = await Promise.all([dayView(user, date), nutiEnabledFor(user.userId)]);
   if (!day) return null;
-  return { png: renderPng(dayCardSvg(day)), day };
+  return { png: renderPng(dayCardSvg(day, { nuti })), day };
 }
 
 /**

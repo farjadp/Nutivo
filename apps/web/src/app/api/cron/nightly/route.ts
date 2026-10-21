@@ -3,6 +3,7 @@ import type { Goals } from "@nutivo/core";
 import { itemsForDate, readReport, storeReport, writeAnalysis } from "@/features/report/api/report.server";
 import { itemsHash } from "@/features/report/model/hash";
 import { localDate } from "@/features/today/api/load-day.server";
+import { nutiEnabledFor } from "@/features/account/api/account.server";
 import { dayCardSvg, renderPng } from "@/features/bot/api/card.server";
 import { sendPhoto, telegramToken } from "@/features/bot/api/telegram.server";
 import { dayView, reportFor } from "@/features/bot/api/service.server";
@@ -97,9 +98,9 @@ async function pushTelegram(userId: string, timezone: string, date: string): Pro
   const { data: row } = await db.from("daily_reports").select("sent_telegram_at").eq("user_id", userId).eq("date", date).maybeSingle();
   if (row?.sent_telegram_at) return false;
   const user = { userId, hasGoals: true, timezone };
-  const [report, day] = await Promise.all([reportFor(user, date, { write: false }), dayView(user, date)]);
+  const [report, day, nuti] = await Promise.all([reportFor(user, date, { write: false }), dayView(user, date), nutiEnabledFor(userId)]);
   if (!report || !day) return false;
-  const res = await sendPhoto(Number(link.chat_id), renderPng(dayCardSvg(day)), reportCaption(report), {
+  const res = await sendPhoto(Number(link.chat_id), renderPng(dayCardSvg(day, { nuti })), reportCaption(report), {
     inline_keyboard: [[{ text: "گزارش کامل", callback_data: `rpt:${date}` }]],
   });
   if (!res.ok) {

@@ -48,15 +48,25 @@ function NumField({ id, label, unit, value, onChange, min, max }: { id: string; 
   );
 }
 
-export function OnboardingForm({ local = false }: { local?: boolean }) {
+export interface ProfileInitial {
+  sex: Sex;
+  age: number;
+  height_cm: number;
+  weight_kg: number;
+  activity: Activity;
+  goal: Goal;
+}
+
+/** First run (`initial` omitted) or editing from «من › پروفایل و اهداف» (`initial` = the saved profile, CTA «ذخیره»). */
+export function OnboardingForm({ local = false, initial }: { local?: boolean; initial?: ProfileInitial }) {
   const router = useRouter();
   const [state, action, pending] = useActionState<OnboardingState, FormData>(saveProfileAction, {});
-  const [sex, setSex] = useState<Sex>("male");
-  const [age, setAge] = useState("35");
-  const [height, setHeight] = useState("175");
-  const [weight, setWeight] = useState("85");
-  const [activity, setActivity] = useState<Activity>("light");
-  const [goal, setGoal] = useState<Goal>("lose");
+  const [sex, setSex] = useState<Sex>(initial?.sex ?? "male");
+  const [age, setAge] = useState(String(initial?.age ?? 35));
+  const [height, setHeight] = useState(String(initial?.height_cm ?? 175));
+  const [weight, setWeight] = useState(String(initial?.weight_kg ?? 85));
+  const [activity, setActivity] = useState<Activity>(initial?.activity ?? "light");
+  const [goal, setGoal] = useState<Goal>(initial?.goal ?? "lose");
   const tz = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "America/Toronto";
 
   const goals = useMemo(() => {
@@ -77,6 +87,7 @@ export function OnboardingForm({ local = false }: { local?: boolean }) {
       className="grid gap-5"
     >
       <input type="hidden" name="timezone" value={tz} />
+      {initial && <input type="hidden" name="return_to" value="/me" />}
       <div className="grid gap-2"><span className="text-sm font-semibold">جنسیت</span><Chips name="sex" value={sex} onChange={setSex} options={[{ v: "male", l: "مرد" }, { v: "female", l: "زن" }]} /></div>
       <div className="grid grid-cols-3 gap-3">
         <NumField id="age" label="سن" unit="سال" value={age} onChange={setAge} min={14} max={100} />
@@ -88,7 +99,7 @@ export function OnboardingForm({ local = false }: { local?: boolean }) {
 
       {goals && (
         <section aria-label="اهداف پیشنهادی" className="rounded-[var(--radius-card)] border border-line bg-surface p-4">
-          <h2 className="text-base font-semibold">اهداف روزانه پیشنهادی</h2>
+          <h2 className="text-base font-semibold">{initial ? "اهداف روزانه" : "اهداف روزانه پیشنهادی"}</h2>
           <dl className="tabular mt-3 grid grid-cols-4 gap-2 text-center">
             {[
               ["کالری", goals.kcal, "text-green-ink"],
@@ -108,7 +119,7 @@ export function OnboardingForm({ local = false }: { local?: boolean }) {
 
       {state.error && <p role="alert" className="text-sm text-error">{state.error}</p>}
       <button type="submit" disabled={pending || !goals} className="h-12 rounded-[var(--radius-btn)] bg-green-ink text-[15px] font-semibold text-surface disabled:opacity-60">
-        {pending ? "در حال ذخیره…" : "شروع"}
+        {pending ? "در حال ذخیره…" : initial ? "ذخیره" : "شروع"}
       </button>
     </form>
   );
