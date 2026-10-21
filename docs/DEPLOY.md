@@ -16,10 +16,15 @@
 - `ANTHROPIC_API_KEY`
 - `NUTIVO_SECRETS_KEY`، `CRON_SECRET`، `NUTIVO_BOT_SECRET`: هر کدام یک مقدار تازه (`openssl rand -hex 32`). کلیدهای ذخیره‌شده در پنل ادمین با `NUTIVO_SECRETS_KEY` رمز می‌شوند؛ عوضش کنی، باید آن‌ها را دوباره وارد کنی.
 
-## Supabase (داشبورد)
-- Authentication → URL Configuration: Site URL = آدرس Railway؛ Redirect URLs: `https://web-production-32973.up.railway.app/auth/callback`.
-- Authentication → Email Templates: «Magic Link» و «Confirm signup» را با `packages/db/supabase/templates/*.html` پر کن (کد شش‌رقمی برای اپ).
-- ایمیل داخلی Supabase در ساعت فقط چند ایمیل می‌فرستد؛ برای تسترها SMTP اختصاصی لازم است.
+## Supabase (تنظیمات ورود)
+- قالب‌های ایمیل، عنوان‌ها، طول کد (۶) و Site URL از `packages/db/supabase/config.toml` فرستاده می‌شوند، نه از داشبورد:
+  ```
+  cd packages/db && pnpm exec supabase config diff --project-ref jspcgzwdowgzmcpcstnu
+  pnpm exec supabase config push --project-ref jspcgzwdowgzmcpcstnu
+  ```
+  مقدارهای مخصوص production در بلوک `[remotes.production]` هستند؛ تنظیمات ابری که نباید عوض شوند هم آنجا ثابت شده‌اند. همیشه اول diff بگیر.
+- لوگوی ایمیل از `/brand/nutivo-lockup-email.png` روی آدرس Railway بارگذاری می‌شود؛ با عوض شدن دامنه، `LOGO` را در قالب‌ها هم عوض کن.
+- ایمیل داخلی Supabase در ساعت فقط چند ایمیل می‌فرستد و فرستنده‌اش «Supabase Auth» است؛ برای تسترها و نام فرستنده Nutivo، SMTP اختصاصی لازم است.
 
 ## هنوز نه
 - بات تلگرام روی Railway (تا وقتی بات محلی روشن است، دو نسخه با هم تداخل می‌کنند).
