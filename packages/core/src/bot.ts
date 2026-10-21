@@ -135,3 +135,18 @@ export interface AppDay {
   /** Oldest to today, for the day strip. */
   strip: { date: string; logged: boolean; complete: boolean }[];
 }
+
+/** What «من» shows and the profile form starts from. Body fields are null for an account without goals. */
+export interface AppProfile {
+  email: string | null;
+  sex: "male" | "female" | null;
+  age: number | null;
+  height_cm: number | null;
+  weight_kg: number | null;
+  activity: "sedentary" | "light" | "moderate" | "active" | "very_active" | null;
+  goal: "lose" | "maintain" | "gain" | null;
+  goals: Goals | null;
+  nuti_enabled: boolean;
+  /** «@username», a first name, or null when the bot isn't linked. */
+  telegram: string | null;
+}

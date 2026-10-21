@@ -5,6 +5,7 @@ import {
   cancelDraft,
   confirmDraft,
   createDraft,
+  createLinkCode,
   dayView,
   editDraft,
   reportFor,
@@ -13,6 +14,8 @@ import {
   type Linked,
 } from "@/features/bot/api/service.server";
 import type { BotResult } from "@nutivo/core";
+import { accountProfile, deleteAccountData, nutiEnabledFor, setNutiEnabled } from "@/features/account/api/account.server";
+import { telegramUsername } from "@/features/bot/api/telegram.server";
 import { dayDetail, deleteItem, foodUnits, itemById, updateItem } from "@/features/mobile/api/day.server";
 import { logEvent } from "@/lib/server/log";
 import { adminClient, isAdminConfigured } from "@/lib/supabase/admin";
@@ -64,6 +67,11 @@ const Bodies = {
   units: z.object({ food_id: z.string().min(1).max(80) }),
   repeat: z.object({ id: z.string().max(400), now: Iso }),
   report: Day,
+  profile: z.object({}),
+  prefs: z.object({ nuti_enabled: z.boolean() }),
+  link_code: z.object({}),
+  // The user types «حذف» in the app; the server checks it too so a stray request can't delete an account.
+  delete_account: z.object({ confirm: z.literal("حذف") }),
 } as const;
 type Action = keyof typeof Bodies;
 
@@ -109,7 +117,28 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
   try {
     switch (a) {
       case "me":
-        return json({ ok: true, data: { email: user.email, has_goals: user.hasGoals, timezone: user.timezone } });
+        return json({
+          ok: true,
+          data: { email: user.email, has_goals: user.hasGoals, timezone: user.timezone, nuti_enabled: await nutiEnabledFor(user.userId) },
+        });
+      case "profile":
+        return json({ ok: true, data: await accountProfile(user.userId, user.email) });
+      case "prefs": {
+        const on = (parsed.data as z.infer<(typeof Bodies)["prefs"]>).nuti_enabled;
+        if (!(await setNutiEnabled(user.userId, on))) return json({ ok: false, error: "ذخیره نشد. دوباره امتحان کن.", code: "server" });
+        void logEvent({ kind: "activity", event: "user.nuti_toggled", actor_id: user.userId, meta: { on, channel: "mobile" } });
+        return json({ ok: true, data: { nuti_enabled: on } });
+      }
+      case "link_code": {
+        const code = await createLinkCode(user.userId);
+        const bot = await telegramUsername();
+        return json({ ok: true, data: { code, url: bot ? `https://t.me/${bot}?start=link_${code}` : null } });
+      }
+      case "delete_account": {
+        if (!(await deleteAccountData(user.userId))) return json({ ok: false, error: "حذف حساب انجام نشد. دوباره امتحان کن.", code: "server" });
+        void logEvent({ kind: "activity", level: "warn", event: "user.self_deleted", actor_id: user.userId, entity: "user", entity_id: user.userId, meta: { channel: "mobile" } });
+        return json({ ok: true, data: { deleted: true } });
+      }
       case "onboard":
         return json(await saveGoals(user.userId, (parsed.data as z.infer<(typeof Bodies)["onboard"]>).profile));
       case "draft": {

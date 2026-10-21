@@ -2,6 +2,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { deleteAccountData } from "@/features/account/api/account.server";
 import { logEvent } from "@/lib/server/log";
 import { canEncrypt, encryptSecret, last4 } from "@/lib/server/secrets";
 import { getSecret, invalidateSettings, SETTING_KEYS } from "@/lib/server/settings";
@@ -66,16 +67,7 @@ export async function deleteUserAction(userId: string, typedEmail: string): Prom
   const { data } = await db.auth.admin.getUserById(userId);
   const email = data.user?.email ?? "";
   if (!email || email.toLowerCase() !== typedEmail.trim().toLowerCase()) return { ok: false, error: "ایمیل واردشده با ایمیل کاربر یکی نیست." };
-  const { data: photos } = await db.storage.from("meal-photos").list(userId, { limit: 1000 });
-  const { error } = await db.auth.admin.deleteUser(userId);
-  if (error) return { ok: false, error: "حذف کاربر انجام نشد." };
-  if (photos?.length) {
-    // Photos live under <user>/<date>/<file>; list returns the date folders.
-    for (const folder of photos) {
-      const { data: files } = await db.storage.from("meal-photos").list(`${userId}/${folder.name}`, { limit: 1000 });
-      if (files?.length) await db.storage.from("meal-photos").remove(files.map((f) => `${userId}/${folder.name}/${f.name}`));
-    }
-  }
+  if (!(await deleteAccountData(userId))) return { ok: false, error: "حذف کاربر انجام نشد." };
   await logEvent({ kind: "activity", level: "warn", event: "admin.user_deleted", ...actorOf(ctx), entity: "user", entity_id: userId, message: email });
   revalidatePath("/admin/users");
   return { ok: true, message: "کاربر و همه داده‌هایش حذف شد." };
