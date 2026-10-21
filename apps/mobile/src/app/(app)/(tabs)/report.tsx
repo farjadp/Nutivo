@@ -1,12 +1,14 @@
-import type { NutiMood, ReportView } from "@nutivo/core";
+import type { AppDay, NutiMood, ReportView } from "@nutivo/core";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import Svg, { Rect } from "react-native-svg";
 import { useCSSVariable } from "uniwind";
+import { DayStrip } from "@/features/day/day-strip";
 import { api } from "@/lib/api";
 import { faDayLabel, faInt } from "@/lib/format";
 import { mealLabel } from "@/lib/meals";
+import { useUndo } from "@/lib/undo";
 import { Button } from "@/ui/button";
 import { Nuti, NutiSays } from "@/ui/nuti";
 import { Screen } from "@/ui/screen";
@@ -59,7 +61,13 @@ function MacroLine({ label, fact, ok, ink }: { label: string; fact: { consumed: 
 const MOOD: Record<ReportView["facts"]["kcal"]["status"], NutiMood> = { in_range: "cheer", under: "think", over: "happy" };
 
 export default function Report() {
-  const { date } = useLocalSearchParams<{ date?: string }>();
+  // A day picked on «امروز» arrives as ?date=; the strip here can change it.
+  const params = useLocalSearchParams<{ date?: string }>();
+  const [date, setDate] = useState<string | undefined>(params.date);
+  useEffect(() => setDate(params.date), [params.date]);
+  const { version } = useUndo();
+  const [strip, setStrip] = useState<AppDay["strip"] | null>(null);
+  const [today, setToday] = useState<string | null>(null);
   const [r, setR] = useState<ReportView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,27 +75,31 @@ export default function Report() {
   async function load() {
     setLoading(true);
     setError(null);
-    const res = await api.report(date);
+    const [res, day] = await Promise.all([api.report(date), api.day(date)]);
+    if (day.ok) {
+      setStrip(day.data.strip);
+      setToday(day.data.day.today);
+    }
     setLoading(false);
     if (res.ok) setR(res.data);
     else setError(res.error);
   }
   useEffect(() => {
-    void load(); // once per opened day
-  }, [date]);
+    void load(); // per day, and again after a meal is saved or edited
+  }, [date, version]);
 
   const f = r?.facts;
   return (
     <Screen>
-      <View className="flex-row items-center justify-between">
-        <View>
-          <Text className="font-heavy text-[22px] leading-[34px]">گزارش {r?.day_label ?? ""}</Text>
-          {r && <Text className="text-xs text-ink-2">{faDayLabel(r.date)}</Text>}
-        </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="بستن" onPress={() => router.back()} className="size-10 items-center justify-center rounded-full active:bg-track">
-          <Text className="text-xl text-ink-2">×</Text>
-        </Pressable>
+      <View className="mt-2">
+        {/* «امروز» / «دیروز» get the date underneath; older days show the date in the title. */}
+        <Text accessibilityRole="header" className="font-heavy text-[24px] leading-[38px]">
+          گزارش {r ? (["امروز", "دیروز"].includes(r.day_label) ? r.day_label : faDayLabel(r.date)) : ""}
+        </Text>
+        {r && ["امروز", "دیروز"].includes(r.day_label) && <Text className="text-xs text-ink-2">{faDayLabel(r.date)}</Text>}
       </View>
+
+      {strip && today && r && <DayStrip strip={strip} today={today} selected={r.date} onSelect={(d) => setDate(d)} />}
 
       {loading && (
         <View accessibilityLiveRegion="polite" className="items-center gap-3 rounded-card bg-purple-tint p-6">
@@ -103,7 +115,12 @@ export default function Report() {
         </View>
       )}
 
-      {r && f && !loading && !f.logged && <NutiSays mood="sleepy" text="برای این روز چیزی ثبت نشده. هر وقت چیزی بخوری و ثبت کنی، گزارشش اینجاست." />}
+      {r && f && !loading && !f.logged && (
+        <View className="gap-4">
+          <NutiSays mood="sleepy" text="برای این روز چیزی ثبت نشده. هر وقت چیزی بخوری و ثبت کنی، گزارشش اینجاست." />
+          <Button label="ثبت وعده" onPress={() => router.push(r.date === today ? "/log" : { pathname: "/log", params: { date: r.date } })} />
+        </View>
+      )}
 
       {r && f && !loading && f.logged && (
         <View className="gap-4">

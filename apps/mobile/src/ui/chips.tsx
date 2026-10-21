@@ -1,7 +1,7 @@
 import { Pressable, View } from "react-native";
 import { Text } from "./text";
 
-export function Chips<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: { v: T; l: string }[]; onChange: (v: T) => void }) {
+export function Chips<T extends string>({ label, value, options, onChange }: { label: string; value: T | null; options: { v: T; l: string }[]; onChange: (v: T) => void }) {
   return (
     <View className="gap-2">
       <Text className="font-strong text-sm">{label}</Text>

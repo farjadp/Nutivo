@@ -1,7 +1,7 @@
 import { suggestGoals, toLatinDigits, toPersianDigits } from "@nutivo/core";
 import { getCalendars } from "expo-localization";
 import { useMemo, useState } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { api, type ProfileInput } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { Button } from "@/ui/button";
@@ -26,22 +26,33 @@ const GOAL: { v: ProfileInput["goal"]; l: string }[] = [
 const num = (s: string) => Number(toLatinDigits(s).replace("٫", "."));
 
 export default function Onboarding() {
-  const { refreshMe } = useSession();
-  const [sex, setSex] = useState<ProfileInput["sex"]>("male");
-  const [age, setAge] = useState("35");
-  const [height, setHeight] = useState("175");
-  const [weight, setWeight] = useState("85");
-  const [activity, setActivity] = useState<ProfileInput["activity"]>("light");
-  const [goal, setGoal] = useState<ProfileInput["goal"]>("lose");
+  const { refreshMe, signOut, me } = useSession();
+  // Nothing pre-filled: pressing «شروع» without reading must not save made-up goals.
+  const [sex, setSex] = useState<ProfileInput["sex"] | null>(null);
+  const [age, setAge] = useState("");
+  const [height, setHeight] = useState("");
+  const [weight, setWeight] = useState("");
+  const [activity, setActivity] = useState<ProfileInput["activity"] | null>(null);
+  const [goal, setGoal] = useState<ProfileInput["goal"] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const profile = useMemo<ProfileInput | null>(() => {
     const a = num(age), h = num(height), w = num(weight);
+    if (!sex || !activity || !goal) return null;
     if (!(Number.isInteger(a) && a >= 14 && a <= 100 && h >= 120 && h <= 230 && w >= 35 && w <= 300)) return null;
     return { sex, age: a, height_cm: h, weight_kg: w, activity, goal, timezone: getCalendars()[0]?.timeZone ?? "America/Toronto" };
   }, [sex, age, height, weight, activity, goal]);
   const goals = profile ? suggestGoals(profile) : null;
+  // What is still missing, named, instead of a red error while the form is half filled.
+  const hint = (() => {
+    const out = (v: string, lo: number, hi: number) => v.trim() !== "" && !(num(v) >= lo && num(v) <= hi);
+    if (out(age, 14, 100)) return { bad: true, text: "سن باید بین ۱۴ تا ۱۰۰ سال باشد." };
+    if (out(height, 120, 230)) return { bad: true, text: "قد باید بین ۱۲۰ تا ۲۳۰ سانت باشد." };
+    if (out(weight, 35, 300)) return { bad: true, text: "وزن باید بین ۳۵ تا ۳۰۰ کیلو باشد." };
+    const missing = [!sex && "جنسیت", !age.trim() && "سن", !height.trim() && "قد", !weight.trim() && "وزن", !activity && "میزان فعالیت", !goal && "هدف"].filter(Boolean);
+    return { bad: false, text: `برای دیدن هدف‌های روزانه، ${missing.join("، ")} را هم مشخص کن.` };
+  })();
 
   async function save() {
     if (!profile) return;
@@ -59,14 +70,14 @@ export default function Onboarding() {
     <Screen>
       <View className="mt-4 gap-2">
         <Text className="font-heavy text-[24px] leading-[38px]">چند تا عدد، برای شروع</Text>
-        <Text className="text-[15px] leading-7 text-ink-2">از این‌ها هدف روزانه‌ات را حساب می‌کنیم. بعداً قابل تغییر است.</Text>
+        <Text className="text-[15px] leading-7 text-ink-2">از این‌ها هدف روزانه‌ات را حساب می‌کنیم. فقط برای حساب انرژی پایه است و به کسی نشان داده نمی‌شود.</Text>
       </View>
 
       <Chips label="جنسیت" value={sex} onChange={setSex} options={[{ v: "male", l: "مرد" }, { v: "female", l: "زن" }]} />
       <View className="flex-row gap-3">
-        <Field className="flex-1" label="سن" unit="سال" value={age} onChangeText={setAge} keyboardType="number-pad" maxLength={3} />
-        <Field className="flex-1" label="قد" unit="سانت" value={height} onChangeText={setHeight} keyboardType="decimal-pad" maxLength={5} />
-        <Field className="flex-1" label="وزن" unit="کیلو" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" maxLength={5} />
+        <Field className="flex-1" label="سن" unit="سال" placeholder="۳۵" value={age} onChangeText={setAge} keyboardType="number-pad" maxLength={3} />
+        <Field className="flex-1" label="قد" unit="سانت" placeholder="۱۷۰" value={height} onChangeText={setHeight} keyboardType="decimal-pad" maxLength={5} />
+        <Field className="flex-1" label="وزن" unit="کیلو" placeholder="۷۰" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" maxLength={5} />
       </View>
       <Chips label="میزان فعالیت" value={activity} onChange={setActivity} options={ACTIVITY} />
       <Chips label="هدف" value={goal} onChange={setGoal} options={GOAL} />
@@ -92,11 +103,19 @@ export default function Onboarding() {
           <Text className="text-xs leading-6 text-ink-2">بر پایه فرمول Mifflin-St Jeor. یک نقطه شروع است، نه توصیه پزشکی.</Text>
         </View>
       ) : (
-        <Text className="text-sm text-error">سن، قد و وزن را در محدوده درست وارد کن.</Text>
+        <Text className={`text-sm leading-6 ${hint.bad ? "text-error" : "text-ink-2"}`}>{hint.text}</Text>
       )}
 
       {error && <Text accessibilityRole="alert" className="text-sm text-error">{error}</Text>}
       <Button label="شروع" busyLabel="در حال ذخیره…" busy={busy} disabled={!goals} onPress={save} />
+
+      {/* A way out for someone who signed in with the wrong email. */}
+      <View className="items-center gap-1 pb-4">
+        {me?.email && <Text className="text-xs text-ink-2">وارد شده با {me.email}</Text>}
+        <Pressable accessibilityRole="button" onPress={() => void signOut()} className="min-h-11 justify-center px-3 active:opacity-70">
+          <Text className="text-sm text-green-ink">با ایمیل دیگری وارد شو</Text>
+        </Pressable>
+      </View>
     </Screen>
   );
 }

@@ -1,12 +1,13 @@
 import { daySeed, nutiSay, type AppDay, type AppItem, type NutiSituation } from "@nutivo/core";
 import { router } from "expo-router";
+import { UserRound } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PanResponder, Pressable, RefreshControl, View } from "react-native";
+import { ActivityIndicator, PanResponder, Pressable, RefreshControl, View } from "react-native";
+import { useCSSVariable } from "uniwind";
 import { DayStrip } from "@/features/day/day-strip";
 import { api } from "@/lib/api";
 import { addDays, faDayLabel, faDayWord, faInt } from "@/lib/format";
 import { MEALS } from "@/lib/meals";
-import { useSession } from "@/lib/session";
 import { useUndo } from "@/lib/undo";
 import { Button } from "@/ui/button";
 import { FoodIconTile } from "@/ui/food-icon";
@@ -50,7 +51,7 @@ function ItemRow({ it }: { it: AppItem }) {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${it.name}، ${faInt(it.kcal)} کالری. ویرایش`}
-      onPress={() => router.push({ pathname: "/item", params: { item: JSON.stringify(it) } })}
+      onPress={() => router.push({ pathname: "/item/[id]", params: { id: it.id } })}
       className="flex-row items-center gap-3 rounded-btn py-1.5 active:bg-track"
     >
       <FoodIconTile name={it.name} estimated={it.estimated} />
@@ -64,7 +65,7 @@ function ItemRow({ it }: { it: AppItem }) {
 }
 
 export default function Today() {
-  const { signOut, me } = useSession();
+  const ink2 = useCSSVariable("--color-ink-2") as string;
   const { version } = useUndo();
   const [data, setData] = useState<AppDay | null>(null);
   const [date, setDate] = useState<string | undefined>(undefined);
@@ -121,12 +122,23 @@ export default function Today() {
     <Screen refreshControl={<RefreshControl refreshing={loading && Boolean(data)} onRefresh={() => load(date)} colorsClassName="accent-green" tintColorClassName="accent-green" />}>
       <View className="flex-row items-center justify-between">
         <Logo height={28} />
-        <Pressable accessibilityRole="button" accessibilityLabel="خروج از حساب" onPress={signOut} className="rounded-full px-3 py-2 active:bg-track">
-          <Text className="text-sm text-ink-2">خروج</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="من: حساب و پشتیبانی"
+          onPress={() => router.navigate("/me")}
+          className="size-11 items-center justify-center rounded-full bg-track active:opacity-70"
+        >
+          <UserRound color={ink2} size={20} strokeWidth={1.75} />
         </Pressable>
       </View>
 
       {data && today && shown && <DayStrip strip={data.strip} today={today} selected={shown} onSelect={(d) => setDate(d)} />}
+
+      {!data && !error && (
+        <View className="items-center py-16">
+          <ActivityIndicator colorClassName="accent-green-ink" />
+        </View>
+      )}
 
       {error && (
         <View className="gap-3 rounded-card bg-surface p-4">
@@ -144,13 +156,20 @@ export default function Today() {
                 <Text className="font-strong text-base">{["امروز", "دیروز"].includes(faDayWord(shown, today)) ? faDayWord(shown, today) : faDayLabel(shown)}</Text>
                 {faDayWord(shown, today) === "دیروز" && <Text className="text-xs text-ink-2">{faDayLabel(shown)}</Text>}
               </View>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push({ pathname: "/report", params: { date: shown } })}
-                className="rounded-full bg-purple-tint px-3 py-1.5 active:opacity-80"
-              >
-                <Text className="font-strong text-xs text-purple-ink">گزارش {faDayWord(shown, today)}</Text>
-              </Pressable>
+              <View className="flex-row items-center gap-2">
+                {!isToday && (
+                  <Pressable accessibilityRole="button" onPress={() => setDate(today)} className="min-h-9 justify-center rounded-full bg-mint px-3 active:opacity-80">
+                    <Text className="font-strong text-xs text-green-ink">برو به امروز</Text>
+                  </Pressable>
+                )}
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.navigate({ pathname: "/report", params: { date: shown } })}
+                  className="min-h-9 justify-center rounded-full bg-purple-tint px-3 active:opacity-80"
+                >
+                  <Text className="font-strong text-xs text-purple-ink">گزارش</Text>
+                </Pressable>
+              </View>
             </View>
             <Ring value={data.day.totals.kcal} goal={data.day.goals.kcal}>
               <Text className="font-heavy text-[34px] leading-[44px]">{faInt(Math.abs(data.day.remaining.kcal))}</Text>
@@ -200,7 +219,7 @@ export default function Today() {
           )}
         </View>
       )}
-      {me?.email && <Text className="pb-16 text-center text-xs text-ink-2">{me.email}</Text>}
+      <View className="h-4" />
     </Screen>
   );
 }

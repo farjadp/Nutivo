@@ -3,7 +3,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
-import { View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SessionProvider, useSession } from "@/lib/session";
 import { UndoProvider } from "@/lib/undo";
@@ -40,6 +40,17 @@ function AccountError() {
   );
 }
 
+/** Signed in, account still loading: show it is working instead of a blank screen. */
+function Opening() {
+  return (
+    <View accessibilityLiveRegion="polite" className="flex-1 items-center justify-center gap-4 bg-ground">
+      <Logo height={40} />
+      <ActivityIndicator colorClassName="accent-green-ink" />
+      <Text className="text-sm text-ink-2">در حال باز کردن حسابت…</Text>
+    </View>
+  );
+}
+
 function Routes() {
   const { ready, session, me, loadingMe } = useSession();
   useEffect(() => {
@@ -47,7 +58,7 @@ function Routes() {
   }, [ready]);
   if (!ready) return null;
   const signedIn = Boolean(session);
-  if (signedIn && !me) return loadingMe ? <View className="flex-1 bg-ground" /> : <AccountError />;
+  if (signedIn && !me) return loadingMe ? <Opening /> : <AccountError />;
   return (
     <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
       <Stack.Protected guard={!signedIn}>
@@ -57,10 +68,7 @@ function Routes() {
         <Stack.Screen name="onboarding" />
       </Stack.Protected>
       <Stack.Protected guard={signedIn && Boolean(me?.has_goals)}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="log" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
-        <Stack.Screen name="item" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
-        <Stack.Screen name="report" options={{ animation: "slide_from_left" }} />
+        <Stack.Screen name="(app)" />
       </Stack.Protected>
     </Stack>
   );

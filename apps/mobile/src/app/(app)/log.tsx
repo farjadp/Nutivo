@@ -1,7 +1,8 @@
 import type { DraftView } from "@nutivo/core";
-import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import { ActivityIndicator, Image, Pressable, TextInput, View } from "react-native";
+import { router, useLocalSearchParams, useNavigation } from "expo-router";
+import { usePreventRemove } from "expo-router/react-navigation";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Alert, Image, Pressable, TextInput, View } from "react-native";
 import { api, type DraftChange } from "@/lib/api";
 import { atTimeOn, faDayWord, localToday } from "@/lib/format";
 import { mealLabel } from "@/lib/meals";
@@ -14,6 +15,8 @@ import { Text } from "@/ui/text";
 import { toPersianDigits } from "@nutivo/core";
 
 const DENIED = "دسترسی داده نشد. از تنظیمات گوشی اجازه را بده یا متن بنویس.";
+/** Reading a photo usually takes 10–20 s; past this the request is dropped and the user can retry. */
+const READ_TIMEOUT_MS = 60_000;
 
 export default function Log() {
   const { saved } = useUndo();
@@ -25,6 +28,39 @@ export default function Log() {
   const [phase, setPhase] = useState<"input" | "reading" | "review">("input");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Set once the meal is saved or the user chose to discard it; the sheet then closes without asking.
+  const [leaving, setLeaving] = useState(false);
+  const [closeAfterSave, setCloseAfterSave] = useState(false);
+  const reading = useRef<AbortController | null>(null);
+  const cancelled = useRef(false);
+  const navigation = useNavigation();
+
+  // Closing the sheet in any way (×, Android back, swipe down) asks first when something would be lost.
+  const dirty = !leaving && (text.trim() !== "" || photo !== null || draft !== null || phase === "reading");
+  usePreventRemove(dirty, ({ data }) => {
+    Alert.alert("این وعده ثبت نشده", "اگر الان بروی، چیزی ذخیره نمی‌شود.", [
+      { text: "ادامه ثبت", style: "cancel" },
+      {
+        text: "دور بریز",
+        style: "destructive",
+        onPress: () => {
+          discard();
+          setLeaving(true);
+          navigation.dispatch(data.action);
+        },
+      },
+    ]);
+  });
+  // After a save the guard is off; close on the next render so it doesn't ask.
+  useEffect(() => {
+    if (closeAfterSave && router.canGoBack()) router.back();
+  }, [closeAfterSave]);
+
+  /** Stop a read in flight and drop the server draft, so nothing is left half-open. */
+  function discard() {
+    reading.current?.abort();
+    if (draft) void api.draftCancel(draft.id);
+  }
 
   async function choose(from: "camera" | "library") {
     setError(null);
@@ -38,11 +74,26 @@ export default function Log() {
     if (!text.trim() && !photo) return setError("بنویس چه خوردی یا یک عکس بگذار.");
     setError(null);
     setPhase("reading");
-    const r = await api.draft({
-      text: text.trim() || undefined,
-      photo: photo ? { base64: photo.base64, mediaType: photo.mediaType } : undefined,
-      now: date ? atTimeOn(date) : undefined,
-    });
+    cancelled.current = false;
+    const ctrl = new AbortController();
+    reading.current = ctrl;
+    const timer = setTimeout(() => ctrl.abort(), READ_TIMEOUT_MS);
+    const r = await api.draft(
+      {
+        text: text.trim() || undefined,
+        photo: photo ? { base64: photo.base64, mediaType: photo.mediaType } : undefined,
+        now: date ? atTimeOn(date) : undefined,
+      },
+      ctrl.signal,
+    );
+    clearTimeout(timer);
+    reading.current = null;
+    if (ctrl.signal.aborted) {
+      // Cancelled by the user or timed out. A draft the server made meanwhile is dropped.
+      if (r.ok) void api.draftCancel(r.data.id);
+      setPhase("input");
+      return setError(cancelled.current ? null : "طول کشید. دوباره امتحان کن یا متن کوتاه‌تری بنویس.");
+    }
     if (!r.ok) {
       setPhase("input");
       return setError(r.error);
@@ -69,12 +120,16 @@ export default function Log() {
     setBusy(false);
     if (!r.ok) return setError(r.error);
     saved({ entryId: r.data.entry_id, label: `${mealLabel(draft.meal_type)} · ${toPersianDigits(Math.round(draft.totals.kcal))} کالری` });
-    router.back();
+    setLeaving(true);
+    setCloseAfterSave(true);
   }
 
-  async function close() {
-    if (draft) void api.draftCancel(draft.id);
-    router.back();
+  // × goes through the same guard as Android back and swipe-down.
+  const close = () => router.back();
+
+  function cancelReading() {
+    cancelled.current = true;
+    reading.current?.abort();
   }
 
   return (
@@ -128,6 +183,9 @@ export default function Log() {
         <View accessibilityLiveRegion="polite" className="items-center gap-3 rounded-card bg-mint p-6">
           <ActivityIndicator colorClassName="accent-green-ink" />
           <Text className="text-[15px] text-green-ink">{photo ? "دارم عکس را نگاه می‌کنم…" : "دارم غذاها را پیدا می‌کنم…"}</Text>
+          <Pressable accessibilityRole="button" onPress={cancelReading} className="min-h-11 justify-center rounded-btn px-4 active:bg-surface">
+            <Text className="font-strong text-sm text-green-ink">لغو</Text>
+          </Pressable>
         </View>
       )}
 

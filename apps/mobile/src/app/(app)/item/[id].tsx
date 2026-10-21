@@ -1,7 +1,8 @@
 import { toLatinDigits, toPersianDigits, type AppItem } from "@nutivo/core";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useNavigation } from "expo-router";
+import { usePreventRemove } from "expo-router/react-navigation";
 import { useEffect, useState } from "react";
-import { Alert, Pressable, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, View } from "react-native";
 import { api } from "@/lib/api";
 import { faInt } from "@/lib/format";
 import { useUndo } from "@/lib/undo";
@@ -15,17 +16,67 @@ const GRAM = "گرم";
 const qtyFa = (n: number) => toPersianDigits(+n.toFixed(2)).replace(".", "٫");
 const step = (q: number) => (q >= 1 ? 1 : 0.5);
 
+function CloseButton() {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel="بستن" onPress={() => router.back()} className="size-11 items-center justify-center rounded-full active:bg-track">
+      <Text className="text-xl text-ink-2">×</Text>
+    </Pressable>
+  );
+}
+
+/** Loads the item by id (so a link or a stale list can't open the wrong data), then shows the editor. */
+export default function EditItemScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [item, setItem] = useState<AppItem | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!id) return setError("این غذا پیدا نشد.");
+    void api.item(id).then((r) => (r.ok ? setItem(r.data) : setError(r.error)));
+  }, [id]);
+  if (item) return <EditItem item={item} />;
+  return (
+    <Screen>
+      <View className="flex-row items-center justify-between">
+        <Text className="font-heavy text-[22px] leading-[34px]">ویرایش</Text>
+        <CloseButton />
+      </View>
+      {error ? (
+        <View className="gap-3">
+          <Text accessibilityRole="alert" className="text-[15px] text-ink-2">{error}</Text>
+          <Button variant="quiet" label="برگشت" onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} />
+        </View>
+      ) : (
+        <View className="items-center py-12">
+          <ActivityIndicator colorClassName="accent-green-ink" />
+        </View>
+      )}
+    </Screen>
+  );
+}
+
 /** Edit amount or weight of a saved item, or delete it. New numbers are computed on the server. */
-export default function EditItem() {
-  const { item: raw } = useLocalSearchParams<{ item: string }>();
-  const item = JSON.parse(raw) as AppItem;
+function EditItem({ item }: { item: AppItem }) {
   const { refresh } = useUndo();
+  const navigation = useNavigation();
   const [units, setUnits] = useState<string[]>([]);
   const [unit, setUnit] = useState(item.unit === GRAM ? GRAM : item.unit);
   const [qty, setQty] = useState(item.unit === GRAM ? 1 : item.qty);
   const [grams, setGrams] = useState(toPersianDigits(Math.round(item.grams)));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  // Leaving with changes that weren't saved asks first (×, Android back, swipe down).
+  const changed = unit !== (item.unit === GRAM ? GRAM : item.unit) || (unit === GRAM ? grams !== toPersianDigits(Math.round(item.grams)) : qty !== item.qty);
+  usePreventRemove(changed && !done, ({ data }) => {
+    Alert.alert("تغییرها ذخیره نشده", "اگر الان بروی، مقدار قبلی می‌ماند.", [
+      { text: "ادامه ویرایش", style: "cancel" },
+      { text: "بی‌خیال", style: "destructive", onPress: () => navigation.dispatch(data.action) },
+    ]);
+  });
+  useEffect(() => {
+    if (done && router.canGoBack()) router.back();
+  }, [done]);
 
   useEffect(() => {
     void api.units(item.food_id).then((r) => r.ok && setUnits(r.data));
@@ -41,7 +92,7 @@ export default function EditItem() {
     setBusy(false);
     if (!r.ok) return setError(r.error);
     refresh();
-    router.back();
+    setDone(true);
   }
 
   function remove() {
@@ -56,7 +107,7 @@ export default function EditItem() {
           setBusy(false);
           if (!r.ok) return setError(r.error);
           refresh();
-          router.back();
+          setDone(true);
         },
       },
     ]);
@@ -66,9 +117,7 @@ export default function EditItem() {
     <Screen>
       <View className="flex-row items-center justify-between">
         <Text className="font-heavy text-[22px] leading-[34px]">ویرایش</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="بستن" onPress={() => router.back()} className="size-10 items-center justify-center rounded-full active:bg-track">
-          <Text className="text-xl text-ink-2">×</Text>
-        </Pressable>
+        <CloseButton />
       </View>
 
       <View className="flex-row items-center gap-3 rounded-card border border-line bg-surface p-4">

@@ -20,6 +20,8 @@ interface UndoState {
 
 const Ctx = createContext<UndoState | null>(null);
 const SHOW_MS = 8000;
+/** Clears the tab bar (49pt) with a small gap; the toast shows over the tabs after a save. */
+const TAB_BAR = 60;
 
 export function UndoProvider({ children }: { children: ReactNode }) {
   const [item, setItem] = useState<Saved | null>(null);
@@ -66,7 +68,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={{ saved: show, version, refresh: () => setVersion((v) => v + 1) }}>
       {children}
       {item && (
-        <Animated.View pointerEvents="box-none" className="absolute inset-x-4" style={{ opacity: fade, bottom: insets.bottom + 12 }}>
+        <Animated.View pointerEvents="box-none" className="absolute inset-x-4" style={{ opacity: fade, bottom: insets.bottom + TAB_BAR }}>
           <View accessibilityLiveRegion="polite" className="flex-row items-center justify-between gap-3 rounded-card bg-ink px-4 py-3">
             <Text className="flex-1 text-sm text-ground">{msg ?? `ثبت شد: ${item.label}`}</Text>
             {!msg && (

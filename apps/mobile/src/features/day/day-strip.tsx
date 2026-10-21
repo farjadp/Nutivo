@@ -10,7 +10,7 @@ import { Text } from "@/ui/text";
 export function DayStrip({ strip, today, selected, onSelect }: { strip: AppDay["strip"]; today: string; selected: string; onSelect: (d: string) => void }) {
   const days = [...strip].reverse();
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-5" contentContainerClassName="gap-1.5 px-5">
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-5 grow-0" contentContainerClassName="gap-1.5 px-5">
       {days.map((d) => {
         const on = d.date === selected;
         const isToday = d.date === today;
