@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countdownFa, otpDigits, sendErrorFa, verifyErrorFa } from "./auth";
+import { codeTimerState, countdownFa, otpDigits, sendErrorFa, verifyErrorFa } from "./auth";
 
 describe("otpDigits", () => {
   it("keeps digits from pasted or Persian input", () => {
@@ -23,5 +23,14 @@ describe("auth errors", () => {
     expect(sendErrorFa({ status: 429 })).toContain("یک دقیقه صبر کن");
     expect(sendErrorFa({ name: "AuthRetryableFetchError" })).toContain("اینترنت");
     expect(verifyErrorFa({ status: 403, code: "otp_expired" })).toContain("کد تازه");
+  });
+});
+
+describe("codeTimerState", () => {
+  it("gets more urgent as the hour runs out", () => {
+    expect(codeTimerState(3600).mood).toBe("happy");
+    expect(codeTimerState(20 * 60).mood).toBe("wink");
+    expect(codeTimerState(120)).toMatchObject({ mood: "think", urgent: true });
+    expect(codeTimerState(0).mood).toBe("sleepy");
   });
 });

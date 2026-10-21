@@ -2,7 +2,7 @@ import { toLatinDigits, toPersianDigits } from "./persian";
 
 /** Sign-in by email code, the same on web and in the app. Matches otp_length / otp_expiry in Supabase config. */
 export const OTP_LENGTH = 6;
-export const OTP_VALID_MINUTES = 10;
+export const OTP_VALID_MINUTES = 60;
 /** Wait before «کد را دوباره بفرست» works again; Supabase refuses faster repeats. */
 export const RESEND_SECONDS = 60;
 
@@ -38,4 +38,12 @@ export function verifyErrorFa(e: AuthErrorLike): string {
   if (e.name === "AuthRetryableFetchError" || e.status === 0) return OFFLINE;
   if (e.status === 429) return "چند بار پشت‌سرهم امتحان شد. یک دقیقه صبر کن.";
   return "این کد درست نیست یا منقضی شده. اگر دکمه داخل ایمیل را زده‌ای، همان کد مصرف شده؛ یک کد تازه بگیر.";
+}
+
+/** How the code countdown looks and what نوتی says, by seconds left of OTP_VALID_MINUTES. */
+export function codeTimerState(secondsLeft: number): { mood: "happy" | "wink" | "think" | "sleepy"; line: string; urgent: boolean } {
+  if (secondsLeft <= 0) return { mood: "sleepy", line: "کدت خوابش برد! یه کد تازه بگیر.", urgent: true };
+  if (secondsLeft <= 5 * 60) return { mood: "think", line: "کد داره تموم میشه، زودتر واردش کن!", urgent: true };
+  if (secondsLeft <= 30 * 60) return { mood: "wink", line: "هنوز کلی وقت داری، با خیال راحت.", urgent: false };
+  return { mood: "happy", line: "کدت تازه‌ست! تا یک ساعت منتظرت می‌مونه.", urgent: false };
 }
