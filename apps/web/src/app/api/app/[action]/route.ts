@@ -20,6 +20,7 @@ import { loadDayFor } from "@/features/today/api/load-day.server";
 import { accountProfile, deleteAccountData, nutiEnabledFor, setNutiEnabled } from "@/features/account/api/account.server";
 import { telegramUsername } from "@/features/bot/api/telegram.server";
 import { dayDetail, deleteItem, foodUnits, itemById, updateItem } from "@/features/mobile/api/day.server";
+import { nakhonakAnswer, nakhonakEnabledFor, nakhonakState, setNakhonakEnabled } from "@/features/nakhonak/api/nakhonak.server";
 import { logEvent } from "@/lib/server/log";
 import { adminClient, isAdminConfigured } from "@/lib/supabase/admin";
 
@@ -79,13 +80,16 @@ const Bodies = {
   }),
   profile: z.object({}),
   prefs: z.object({ nuti_enabled: z.boolean() }),
+  nakhonak: z.object({}),
+  nakhonak_prefs: z.object({ on: z.boolean() }),
+  nakhonak_answer: z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), choice: z.string().min(1).max(4) }),
   link_code: z.object({}),
   // The user types «حذف» in the app; the server checks it too so a stray request can't delete an account.
   delete_account: z.object({ confirm: z.literal("حذف") }),
 } as const;
 type Action = keyof typeof Bodies;
 
-const NEEDS_GOALS = new Set<Action>(["draft", "draft_edit", "draft_confirm", "today", "day", "repeat", "report", "item_update", "item_delete", "ask", "ask_log"]);
+const NEEDS_GOALS = new Set<Action>(["draft", "draft_edit", "draft_confirm", "today", "day", "repeat", "report", "item_update", "item_delete", "ask", "ask_log", "nakhonak_answer"]);
 
 interface AppUser extends Linked {
   email: string | null;
@@ -129,7 +133,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
       case "me":
         return json({
           ok: true,
-          data: { email: user.email, has_goals: user.hasGoals, timezone: user.timezone, nuti_enabled: await nutiEnabledFor(user.userId) },
+          data: {
+            email: user.email,
+            has_goals: user.hasGoals,
+            timezone: user.timezone,
+            nuti_enabled: await nutiEnabledFor(user.userId),
+            nakhonak_enabled: await nakhonakEnabledFor(user.userId),
+          },
         });
       case "ask": {
         const b = parsed.data as z.infer<(typeof Bodies)["ask"]>;
@@ -171,6 +181,21 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
         if (!(await setNutiEnabled(user.userId, on))) return json({ ok: false, error: "ذخیره نشد. دوباره امتحان کن.", code: "server" });
         void logEvent({ kind: "activity", event: "user.nuti_toggled", actor_id: user.userId, meta: { on, channel: "mobile" } });
         return json({ ok: true, data: { nuti_enabled: on } });
+      }
+      case "nakhonak":
+        return json({ ok: true, data: await nakhonakState(user.userId) });
+      case "nakhonak_prefs": {
+        const on = (parsed.data as z.infer<(typeof Bodies)["nakhonak_prefs"]>).on;
+        if (!(await setNakhonakEnabled(user.userId, on))) return json({ ok: false, error: "ذخیره نشد. دوباره امتحان کن.", code: "server" });
+        void logEvent({ kind: "activity", event: "user.nakhonak_toggled", actor_id: user.userId, meta: { on, channel: "mobile" } });
+        return json({ ok: true, data: await nakhonakState(user.userId) });
+      }
+      case "nakhonak_answer": {
+        const b = parsed.data as z.infer<(typeof Bodies)["nakhonak_answer"]>;
+        const r = await nakhonakAnswer(user.userId, b.date, b.choice);
+        if (!r.ok) return json({ ok: false, error: r.error === "not_today" ? "قصه‌ی این روز تموم شده." : "درخواست نامعتبر است.", code: "bad_request" });
+        void logEvent({ kind: "activity", event: "nakhonak.answered", actor_id: user.userId, meta: { outcome: r.today.result?.outcome, story: r.today.story?.id, channel: "mobile" } });
+        return json({ ok: true, data: r.today });
       }
       case "link_code": {
         const code = await createLinkCode(user.userId);

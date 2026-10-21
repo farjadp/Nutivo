@@ -14,3 +14,4 @@ export * from "./bot";
 export * from "./mascot";
 export * from "./auth";
 export * from "./password";
+export * from "./nakhonak";

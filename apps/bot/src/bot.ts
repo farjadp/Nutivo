@@ -2,7 +2,7 @@ import { toLatinDigits, type DayView, type DraftView, type MealType } from "@nut
 import { Bot, InlineKeyboard, InputFile, type Context } from "grammy";
 import { reportText } from "@nutivo/core";
 import type { UserFromGetMe } from "grammy/types";
-import type { Api, OnboardProfile } from "./api";
+import type { Api, NakhonakMessage, OnboardProfile } from "./api";
 import { COPY, dayCaption, dayCard, draftCard, goalsCard, MEAL, n, short } from "./text";
 
 /** Per-chat state kept on the server (bot_sessions), so the bot process itself is stateless. */
@@ -43,6 +43,16 @@ const NUMERIC = { age: [14, 100], height: [120, 230], weight: [35, 300] } as con
 function localISO(d: Date): string {
   // The server stores eaten_at with an offset; the bot runs in UTC, so send UTC and let the API place it in the user's day.
   return d.toISOString().replace("Z", "+00:00");
+}
+
+export function nakhonakKeyboard(m: NakhonakMessage): InlineKeyboard | undefined {
+  if (!m.keyboard?.length) return undefined;
+  const kb = new InlineKeyboard();
+  for (const row of m.keyboard) {
+    for (const b of row) kb.text(b.text, b.callback_data);
+    kb.row();
+  }
+  return kb;
 }
 
 export function draftKeyboard(v: DraftView): InlineKeyboard {
@@ -173,6 +183,13 @@ export function createBot(token: string, deps: BotDeps): Bot {
   bot.command("help", (ctx) => ctx.reply(COPY.help, { parse_mode: "HTML" }));
   bot.command("today", (ctx) => showToday(ctx));
   bot.command("report", (ctx) => showReport(ctx));
+  bot.command("nakhonak", async (ctx) => {
+    const { u, c } = ids(ctx);
+    const r = await api.nakhonakToday(u, c);
+    if (!r.ok) return ctx.reply(r.code === "no_goals" || r.code === "not_linked" ? "اول هدف‌هایت را تعیین کنیم: /start" : r.error);
+    await ctx.reply(r.data.text, { parse_mode: "HTML", reply_markup: nakhonakKeyboard(r.data) });
+  });
+
   bot.command("link", async (ctx) => {
     const { u, c } = ids(ctx);
     const code = ctx.match?.trim();
@@ -241,6 +258,22 @@ export function createBot(token: string, deps: BotDeps): Bot {
     const r = await api.undo(u, c, ctx.match[1]!);
     await ctx.answerCallbackQuery(r.ok ? { text: "برگشت" } : { text: r.error, show_alert: true });
     if (r.ok) await ctx.editMessageText(COPY.undone).catch(() => undefined);
+  });
+
+  bot.callbackQuery(/^nk:(\d{4}-\d{2}-\d{2}):([a-z]{1,2})$/, async (ctx) => {
+    const { u, c } = ids(ctx);
+    const r = await api.nakhonakAnswer(u, c, ctx.match[1]!, ctx.match[2]!);
+    if (!r.ok) return ctx.answerCallbackQuery({ text: r.error, show_alert: true });
+    await ctx.answerCallbackQuery();
+    await ctx.editMessageText(r.data.text, { parse_mode: "HTML" }).catch(() => ctx.reply(r.data.text, { parse_mode: "HTML" }));
+  });
+
+  bot.callbackQuery(/^nko:(on|off)$/, async (ctx) => {
+    const { u, c } = ids(ctx);
+    const r = await api.nakhonakToggle(u, c, ctx.match[1] === "on");
+    if (!r.ok) return ctx.answerCallbackQuery({ text: r.error, show_alert: true });
+    await ctx.answerCallbackQuery();
+    await ctx.editMessageText(r.data.text, { parse_mode: "HTML", reply_markup: nakhonakKeyboard(r.data) });
   });
 
   bot.callbackQuery(/^rpt:(\d{4}-\d{2}-\d{2})$/, async (ctx) => {

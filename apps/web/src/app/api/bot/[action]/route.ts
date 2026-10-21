@@ -24,6 +24,9 @@ import { logEvent } from "@/lib/server/log";
 import { isAdminConfigured } from "@/lib/supabase/admin";
 import { botSecret } from "@/shared/config";
 import { telegramToken, telegramUsername } from "@/features/bot/api/telegram.server";
+import { nakhonakAnswer, nakhonakEnabledFor, nakhonakToday, setNakhonakEnabled } from "@/features/nakhonak/api/nakhonak.server";
+import { nakhonakTelegram } from "@/features/nakhonak/model/telegram";
+import { NAKHONAK_LINES } from "@nutivo/core";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -70,6 +73,9 @@ const Bodies = {
   repeat: Base.extend({ id: z.string().max(400), now: Iso }),
   today_card: Base.extend({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
   report: Base.extend({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
+  nakhonak_today: Base,
+  nakhonak_toggle: Base.extend({ on: z.boolean() }),
+  nakhonak_answer: Base.extend({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), choice: z.string().min(1).max(4) }),
 } as const;
 type Action = keyof typeof Bodies;
 
@@ -80,8 +86,8 @@ function authorized(req: Request): boolean {
   return timingSafeEqual(Buffer.from(got), Buffer.from(secret));
 }
 
-const NEEDS_USER = new Set<Action>(["draft", "draft_edit", "draft_confirm", "draft_cancel", "undo", "today", "repeat", "onboard", "today_card", "report"]);
-const NEEDS_GOALS = new Set<Action>(["draft", "draft_edit", "draft_confirm", "today", "repeat", "today_card", "report"]);
+const NEEDS_USER = new Set<Action>(["draft", "draft_edit", "draft_confirm", "draft_cancel", "undo", "today", "repeat", "onboard", "today_card", "report", "nakhonak_today", "nakhonak_toggle", "nakhonak_answer"]);
+const NEEDS_GOALS = new Set<Action>(["draft", "draft_edit", "draft_confirm", "today", "repeat", "today_card", "report", "nakhonak_today", "nakhonak_toggle", "nakhonak_answer"]);
 
 /**
  * Internal API for the Telegram bot (apps/bot). Not for browsers: requires the shared NUTIVO_BOT_SECRET.
@@ -150,6 +156,29 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
       case "report": {
         const r = await reportFor(user!, b.date as string | undefined);
         return json(r ? { ok: true, data: r } : { ok: false, error: "اول هدف‌هایت را تعیین کنیم.", code: "no_goals" });
+      }
+      // ناخنک: off → an invitation with an «on» button; on → today's story or its result.
+      case "nakhonak_today": {
+        if (!(await nakhonakEnabledFor(user!.userId))) {
+          return json({ ok: true, data: { enabled: false, text: `<b>ناخنک</b>\n\n${NAKHONAK_LINES.intro}`, keyboard: [[{ text: "روشنش کن", callback_data: "nko:on" }]] } });
+        }
+        const t = await nakhonakToday(user!.userId);
+        return json(t ? { ok: true, data: { enabled: true, ...nakhonakTelegram(t) } } : { ok: false, error: "اول هدف‌هایت را تعیین کنیم.", code: "no_goals" });
+      }
+      case "nakhonak_toggle": {
+        const on = Boolean(b.on);
+        if (!(await setNakhonakEnabled(user!.userId, on))) return json({ ok: false, error: "ذخیره نشد. دوباره امتحان کن.", code: "server" });
+        void logEvent({ kind: "activity", event: "user.nakhonak_toggled", actor_id: user!.userId, meta: { on, channel: "telegram" } });
+        if (!on) return json({ ok: true, data: { enabled: false, text: `<b>ناخنک</b>\n\n${NAKHONAK_LINES.disabled}`, keyboard: null } });
+        const t = await nakhonakToday(user!.userId);
+        const msg = t ? nakhonakTelegram(t) : { text: "", keyboard: null };
+        return json({ ok: true, data: { enabled: true, text: `<b>ناخنک</b>\n\n${NAKHONAK_LINES.enabled}\n\n${msg.text}`, keyboard: msg.keyboard } });
+      }
+      case "nakhonak_answer": {
+        const r = await nakhonakAnswer(user!.userId, String(b.date), String(b.choice));
+        if (!r.ok) return json({ ok: false, error: r.error === "not_today" ? "قصه‌ی این روز تموم شده." : "این گزینه رو نمی‌شناسم.", code: "bad_request" });
+        void logEvent({ kind: "activity", event: "nakhonak.answered", actor_id: user!.userId, meta: { outcome: r.today.result?.outcome, story: r.today.story?.id, channel: "telegram" } });
+        return json({ ok: true, data: nakhonakTelegram(r.today) });
       }
     }
   } catch (err) {

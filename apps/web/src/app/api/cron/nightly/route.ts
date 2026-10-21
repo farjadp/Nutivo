@@ -5,8 +5,10 @@ import { itemsHash } from "@/features/report/model/hash";
 import { localDate } from "@/features/today/api/load-day.server";
 import { nutiEnabledFor } from "@/features/account/api/account.server";
 import { dayCardSvg, renderPng } from "@/features/bot/api/card.server";
-import { sendPhoto, telegramToken } from "@/features/bot/api/telegram.server";
+import { sendMessage, sendPhoto, telegramToken } from "@/features/bot/api/telegram.server";
 import { dayView, reportFor } from "@/features/bot/api/service.server";
+import { markNakhonakSent, nakhonakToday } from "@/features/nakhonak/api/nakhonak.server";
+import { nakhonakTelegram } from "@/features/nakhonak/model/telegram";
 import { reportCaption } from "@nutivo/core";
 import { logEvent } from "@/lib/server/log";
 import { adminClient, isAdminConfigured } from "@/lib/supabase/admin";
@@ -40,7 +42,7 @@ export async function GET(request: Request) {
 
   const { data: profiles, error } = await db
     .from("profiles")
-    .select("id, timezone, goal_kcal, goal_protein_g, goal_carbs_g, goal_fat_g")
+    .select("id, timezone, goal_kcal, goal_protein_g, goal_carbs_g, goal_fat_g, nakhonak_enabled")
     .eq("status", "active")
     .not("goal_kcal", "is", null);
   if (error) {
@@ -81,12 +83,23 @@ export async function GET(request: Request) {
     }
   }
 
+  // ناخنک: today's story to Telegram at NUTIVO_NAKHONAK_HOUR_LOCAL (default 20), for users who turned it on.
+  const nakhonakHour = Number(process.env.NUTIVO_NAKHONAK_HOUR_LOCAL ?? 20);
+  let stories = 0;
+  for (const p of (profiles ?? []).filter((p) => p.nakhonak_enabled && (!onlyUser || p.id === onlyUser) && (force || hourIn(p.timezone ?? "America/Toronto", now) === nakhonakHour)).slice(0, maxPerRun)) {
+    try {
+      if (await pushNakhonak(p.id)) stories++;
+    } catch (err) {
+      void logEvent({ kind: "system", level: "error", event: "cron.nakhonak_failed", actor_id: p.id, message: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
   // Housekeeping: Telegram drafts nobody confirmed, and expired link codes.
   await db.from("bot_drafts").delete().lt("expires_at", now.toISOString());
   await db.from("link_codes").delete().lt("expires_at", now.toISOString());
 
-  void logEvent({ kind: "system", event: "cron.nightly", message: `${generated} generated, ${skipped} skipped, ${failed} failed, ${pushed} sent to Telegram`, meta: { due: due.length } });
-  return NextResponse.json({ ok: true, due: due.length, generated, skipped, failed, pushed });
+  void logEvent({ kind: "system", event: "cron.nightly", message: `${generated} generated, ${skipped} skipped, ${failed} failed, ${pushed} sent to Telegram, ${stories} ناخنک stories`, meta: { due: due.length } });
+  return NextResponse.json({ ok: true, due: due.length, generated, skipped, failed, pushed, stories });
 }
 
 /** Sends the day card and report caption to the user's Telegram chat once per day. */
@@ -109,5 +122,25 @@ async function pushTelegram(userId: string, timezone: string, date: string): Pro
   }
   await db.from("daily_reports").update({ sent_telegram_at: new Date().toISOString() }).eq("user_id", userId).eq("date", date);
   void logEvent({ kind: "activity", event: "bot.report_sent", actor_id: userId, message: date });
+  return true;
+}
+
+/** Sends today's ناخنک story once, unless it was already answered in the app or sent before. */
+async function pushNakhonak(userId: string): Promise<boolean> {
+  if (!(await telegramToken())) return false;
+  const db = adminClient();
+  const { data: link } = await db.from("telegram_links").select("chat_id").eq("user_id", userId).maybeSingle();
+  if (!link) return false;
+  const today = await nakhonakToday(userId);
+  if (!today || today.kind !== "story" || today.result) return false;
+  const { data: row } = await db.from("nakhonak_days").select("sent_telegram_at").eq("user_id", userId).eq("local_date", today.date).maybeSingle();
+  if (row?.sent_telegram_at) return false;
+  const msg = nakhonakTelegram(today);
+  const res = await sendMessage(Number(link.chat_id), msg.text, msg.keyboard ? { inline_keyboard: msg.keyboard } : undefined);
+  if (!res.ok) {
+    void logEvent({ kind: "system", level: "warn", event: "bot.nakhonak_failed", actor_id: userId, message: res.description ?? "unknown" });
+    return false;
+  }
+  await markNakhonakSent(userId, today.date);
   return true;
 }

@@ -50,6 +50,7 @@ const bot = createBot(token, {
 await bot.api.setMyCommands([
   { command: "today", description: "کارت امروز" },
   { command: "report", description: "گزارش امروز" },
+  { command: "nakhonak", description: "حالت شیطان: قصه‌ی ناخنک" },
   { command: "help", description: "راهنما" },
   { command: "link", description: "وصل‌کردن به حساب وب" },
 ]);

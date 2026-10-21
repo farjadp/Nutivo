@@ -18,6 +18,12 @@ export interface OnboardProfile {
   timezone: string;
 }
 
+/** ناخنک's message, already formatted as Telegram HTML by the server. */
+export interface NakhonakMessage {
+  text: string;
+  keyboard: { text: string; callback_data: string }[][] | null;
+}
+
 /** Typed client for the web app's /api/bot/* endpoints. Never throws: network errors come back as { ok: false }. */
 export function createApi(cfg: ApiConfig) {
   const f = cfg.fetch ?? fetch;
@@ -50,6 +56,9 @@ export function createApi(cfg: ApiConfig) {
     today: (u: TgUser, c: number, date?: string) => call<DayView>("today", u, c, date ? { date } : {}),
     todayCard: (u: TgUser, c: number, date?: string) => call<{ png_base64: string; day: DayView }>("today_card", u, c, date ? { date } : {}),
     report: (u: TgUser, c: number, date?: string) => call<ReportView>("report", u, c, date ? { date } : {}),
+    nakhonakToday: (u: TgUser, c: number) => call<NakhonakMessage & { enabled: boolean }>("nakhonak_today", u, c),
+    nakhonakToggle: (u: TgUser, c: number, on: boolean) => call<NakhonakMessage & { enabled: boolean }>("nakhonak_toggle", u, c, { on }),
+    nakhonakAnswer: (u: TgUser, c: number, date: string, choice: string) => call<NakhonakMessage>("nakhonak_answer", u, c, { date, choice }),
     repeat: (u: TgUser, c: number, id: string, now: string) => call<{ entry_id: string; label: string; day: DayView | null }>("repeat", u, c, { id, now }),
   };
 }

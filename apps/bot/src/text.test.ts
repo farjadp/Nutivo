@@ -1,6 +1,6 @@
 import type { DraftView } from "@nutivo/core";
 import { bar, draftCard, esc, short } from "./text";
-import { draftKeyboard } from "./bot";
+import { draftKeyboard, nakhonakKeyboard } from "./bot";
 
 const draft: DraftView = {
   id: "00000000-0000-4000-8000-000000000000",
@@ -40,5 +40,18 @@ describe("bot text", () => {
     const kb = draftKeyboard(draft).inline_keyboard.flat();
     for (const b of kb) if ("callback_data" in b) expect(Buffer.byteLength(b.callback_data ?? "")).toBeLessThanOrEqual(64);
     expect(kb.some((b) => b.text === "اول وزن‌ها")).toBe(true);
+  });
+});
+
+describe("ناخنک buttons", () => {
+  it("lays out one choice per row, within the callback limit", () => {
+    const kb = nakhonakKeyboard({
+      text: "x",
+      keyboard: [[{ text: "الف", callback_data: "nk:2026-10-21:a" }], [{ text: "امروز حوصله ندارم", callback_data: "nk:2026-10-21:x" }]],
+    })!;
+    const rows = kb.inline_keyboard.filter((r) => r.length);
+    expect(rows).toHaveLength(2);
+    for (const r of rows) for (const b of r) if ("callback_data" in b) expect(Buffer.byteLength(b.callback_data ?? "")).toBeLessThanOrEqual(64);
+    expect(nakhonakKeyboard({ text: "x", keyboard: null })).toBeUndefined();
   });
 });
