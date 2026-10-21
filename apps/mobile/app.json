@@ -22,7 +22,12 @@
         "foregroundImage": "./assets/brand/adaptive-foreground.png",
         "monochromeImage": "./assets/brand/adaptive-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_WEIGHT"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -64,6 +69,23 @@
         {
           "icon": "./assets/brand/notification-icon.png",
           "color": "#007F71"
+        }
+      ],
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "Nutivo وزن، قدم‌ها و انرژی فعالیت امروزت را از Apple Health می‌خواند تا کنار کالری‌ات نشان بدهد. چیزی در Health نوشته نمی‌شود.",
+          "NSHealthUpdateUsageDescription": "Nutivo چیزی در Apple Health نمی‌نویسد.",
+          "background": false
+        }
+      ],
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
         }
       ]
     ],

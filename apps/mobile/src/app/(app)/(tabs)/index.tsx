@@ -1,6 +1,6 @@
 import { daySeed, nutiSay, type AppDay, type AppItem, type NutiSituation } from "@nutivo/core";
 import { router } from "expo-router";
-import { UserRound } from "lucide-react-native";
+import { Footprints, UserRound } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, PanResponder, Pressable, RefreshControl, View } from "react-native";
 import { useCSSVariable } from "uniwind";
@@ -9,6 +9,8 @@ import { QuickRepeats } from "@/features/day/quick-repeats";
 import { api } from "@/lib/api";
 import { addDays, faDayLabel, faDayWord, faInt } from "@/lib/format";
 import { MEALS } from "@/lib/meals";
+import { HEALTH_NAME } from "@/lib/health";
+import { useHealth } from "@/lib/health-provider";
 import { useSession } from "@/lib/session";
 import { useUndo } from "@/lib/undo";
 import { Button } from "@/ui/button";
@@ -125,6 +127,10 @@ export default function Today() {
 
   const isToday = shown === today;
   const nutiOn = useSession().me?.nuti_enabled ?? true;
+  const health = useHealth();
+  const act = isToday && health.on ? health.activity : null;
+  // Zero is left out: an empty Health Connect reports 0 steps, which says nothing.
+  const actParts = act ? [!!act.steps && `${faInt(act.steps)} قدم`, !!act.activeKcal && `${faInt(act.activeKcal)} کالری فعالیت`].filter(Boolean) : [];
   // نوتی off: the day view shows only the numbers (the brand promise is that it can be switched off).
   const nuti = data && isToday && nutiOn ? situation(data) : null;
   const line = nuti && shown ? nutiSay(nuti.key, nuti.vars, daySeed(shown)) : null;
@@ -194,6 +200,13 @@ export default function Today() {
               <Macro label="چربی" value={data.day.totals.fat_g} goal={data.day.goals.fat_g} bar="bg-fat" ink="text-fat-ink" />
             </View>
             {data.day.streak > 1 && isToday && <Text className="text-xs text-green-ink">زنجیره {faInt(data.day.streak)} روزه</Text>}
+            {/* Shown for context only: activity is not added to the calorie goal. */}
+            {actParts.length > 0 && (
+              <View accessible accessibilityLabel={`از ${HEALTH_NAME}: ${actParts.join("، ")}`} className="flex-row items-center gap-1.5">
+                <Footprints color={ink2} size={14} />
+                <Text className="text-xs text-ink-2">{actParts.join(" · ")} · از {HEALTH_NAME}</Text>
+              </View>
+            )}
           </View>
 
           {line && <NutiSays mood={line.mood} text={line.text} />}

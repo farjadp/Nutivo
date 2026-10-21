@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import { useReduceMotion } from "@/lib/motion";
+import { HealthProvider } from "@/lib/health-provider";
 import { RemindersProvider } from "@/lib/reminders-provider";
 
 // A deep link straight to /log or /item still has the tabs underneath, so closing it lands somewhere.
@@ -11,13 +12,15 @@ export default function AppLayout() {
   const reduceMotion = useReduceMotion();
   return (
     <RemindersProvider>
-      <Stack screenOptions={{ headerShown: false, animation: reduceMotion ? "none" : "default" }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="log" options={{ presentation: "modal" }} />
-        <Stack.Screen name="item/[id]" options={{ presentation: "modal" }} />
-        <Stack.Screen name="profile" />
-        <Stack.Screen name="delete-account" />
-      </Stack>
+      <HealthProvider>
+        <Stack screenOptions={{ headerShown: false, animation: reduceMotion ? "none" : "default" }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="log" options={{ presentation: "modal" }} />
+          <Stack.Screen name="item/[id]" options={{ presentation: "modal" }} />
+          <Stack.Screen name="profile" />
+          <Stack.Screen name="delete-account" />
+        </Stack>
+      </HealthProvider>
     </RemindersProvider>
   );
 }

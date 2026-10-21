@@ -5,6 +5,7 @@ import { ChevronLeft, Globe, LogOut, MessageCircle, Phone, Send, Target, Trash2 
 import { useCallback, useState, type ReactNode } from "react";
 import { ActivityIndicator, Alert, Linking, Pressable, Text as RNText, Switch, View } from "react-native";
 import { useCSSVariable } from "uniwind";
+import { HealthRow, WeightSuggestion } from "@/features/health/health-rows";
 import { ReminderRows } from "@/features/reminders/reminder-rows";
 import { api } from "@/lib/api";
 import { faInt } from "@/lib/format";
@@ -142,11 +143,10 @@ export default function Me() {
   const [profile, setProfile] = useState<AppProfile | null>(null);
 
   // Reload on every visit: goals change on the profile screen, the Telegram link changes in the bot.
-  useFocusEffect(
-    useCallback(() => {
-      void api.profile().then((r) => r.ok && setProfile(r.data));
-    }, []),
-  );
+  const loadProfile = useCallback(() => {
+    void api.profile().then((r) => r.ok && setProfile(r.data));
+  }, []);
+  useFocusEffect(loadProfile);
 
   const goals = profile?.goals;
   const goalsLine = goals ? `${faInt(goals.kcal)} کالری · ${toPersianDigits(Math.round(goals.protein_g))} گرم پروتئین` : "قد، وزن، فعالیت و اهداف روزانه";
@@ -162,6 +162,8 @@ export default function Me() {
     <Screen>
       <Text accessibilityRole="header" className="font-heavy mt-2 text-[24px] leading-[38px]">من</Text>
 
+      <WeightSuggestion profile={profile} onUpdated={loadProfile} />
+
       <Section title="حساب">
         <View className="px-4 py-3">
           <Text className="text-xs text-ink-2">ایمیل</Text>
@@ -175,6 +177,10 @@ export default function Me() {
         <NutiRow />
         <Divider />
         {profile ? <TelegramRow linkedAs={profile.telegram} /> : <View className="min-h-14" />}
+      </Section>
+
+      <Section title="سلامت">
+        <HealthRow />
       </Section>
 
       <Section title="یادآوری‌ها">
