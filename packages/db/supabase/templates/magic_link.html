@@ -8,7 +8,7 @@
 </head>
 <body style="margin:0; padding:0; background:#faf9f6;">
 <!-- Preview line in the inbox list; hidden in the message itself. -->
-<div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">کد ورود تو: {{ .Token }} · این کد تا یک ساعت معتبر است.</div>
+<div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">کد ورود تو: {{ .Token }} · یک‌بارمصرف، تا ۱۰ دقیقه معتبر.</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#faf9f6;">
   <tr>
     <td align="center" style="padding:32px 16px;">
@@ -31,16 +31,30 @@
                 </td>
               </tr>
             </table>
-            <p style="margin:12px 0 28px; font-size:13px; line-height:1.8; color:#667085; text-align:center;">این کد را در اپ Nutivo وارد کن. تا یک ساعت معتبر است.</p>
+            <p style="margin:12px 0 28px; font-size:13px; line-height:1.8; color:#667085; text-align:center;">این کد <b style="color:#20252b;">یک‌بارمصرف</b> است و <b style="color:#20252b;">تا ۱۰ دقیقه</b> کار می‌کند. بعد از آن یک کد تازه بگیر.</p>
 
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
               <tr>
                 <td align="center" style="border-radius:12px; background:#007f71;">
-                  <a href="{{ .ConfirmationURL }}" style="display:inline-block; padding:13px 28px; font-family:Tahoma, 'Segoe UI', Arial, sans-serif; font-size:15px; font-weight:bold; color:#ffffff; text-decoration:none; border-radius:12px;">ورود در مرورگر</a>
+                  <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email" style="display:inline-block; padding:13px 28px; font-family:Tahoma, 'Segoe UI', Arial, sans-serif; font-size:15px; font-weight:bold; color:#ffffff; text-decoration:none; border-radius:12px;">ورود در مرورگر</a>
                 </td>
               </tr>
             </table>
             <p style="margin:12px 0 0; font-size:12px; line-height:1.8; color:#667085; text-align:center;">دکمه برای ورود در مرورگر است؛ در اپ همان کد کافی است.</p>
+          </td>
+        </tr>
+        <tr>
+          <td dir="rtl" style="padding:16px 0 0;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td dir="rtl" style="background:#f5eaf0; border-radius:12px; padding:16px 20px; font-family:Tahoma, 'Segoe UI', Arial, sans-serif; font-size:13px; line-height:2; color:#66023c; text-align:right;">
+                  <b>مشکلی پیش آمد؟</b> با ما در تماس باش:<br>
+                  تلگرام: <a href="https://t.me/farjadtalks" style="color:#66023c;">@farjadtalks</a><br>
+                  تلفن و واتس‌اپ: <a href="tel:+14376611674" dir="ltr" style="color:#66023c; text-decoration:none;">+1 437 661 1674</a><br>
+                  وب‌سایت: <a href="https://www.farjadp.com" style="color:#66023c;">farjadp.com</a>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
         <tr>
