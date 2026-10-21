@@ -23,6 +23,9 @@
   pnpm exec supabase config push --project-ref jspcgzwdowgzmcpcstnu
   ```
   مقدارهای مخصوص production در بلوک `[remotes.production]` هستند؛ تنظیمات ابری که نباید عوض شوند هم آنجا ثابت شده‌اند. همیشه اول diff بگیر.
+- push کامل کلید Resend را از `NUTIVO_RESEND_API_KEY` می‌خواند. بدون کلید push نکن؛ برای عوض کردن فقط قالب‌ها، از یک کپی config بدون بلوک SMTP و `--workdir` استفاده کن تا رمز SMTP دست نخورد.
+- دکمه ایمیل به `/auth/confirm` روی دامنه خودمان می‌رود (نه supabase.co). اول وب را deploy کن، بعد قالب‌ها را push کن.
+- کد ورود یک‌بارمصرف است و ۱۰ دقیقه اعتبار دارد (`otp_expiry = 600`).
 - لوگوی ایمیل از `/brand/nutivo-lockup-email.png` روی آدرس Railway بارگذاری می‌شود؛ با عوض شدن دامنه، `LOGO` را در قالب‌ها هم عوض کن.
 - ایمیل داخلی Supabase در ساعت فقط چند ایمیل می‌فرستد و فرستنده‌اش «Supabase Auth» است؛ برای تسترها و نام فرستنده Nutivo، SMTP اختصاصی لازم است.
 
