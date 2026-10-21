@@ -136,11 +136,6 @@ export function ConfirmSheet({ draft, saving, error, onCancel, onConfirm, nuti =
                         {it.from_photo && <Camera size={12} strokeWidth={2} aria-label="از روی عکس" />}
                         «{it.name_raw}»
                         {food && food.confidence !== "high" && <span> · داده {food.confidence === "low" ? "کم‌اطمینان" : "تقریبی"}</span>}
-                        {food?.source === "figfit" && (
-                          <a href="https://figfit.ir" target="_blank" rel="noreferrer" className="underline decoration-dotted underline-offset-2" title="FigFit food database, CC BY-NC-SA 4.0">
-                            · منبع: FigFit
-                          </a>
-                        )}
                       </p>
                     </div>
                     <button type="button" onClick={() => setItems((p) => p.filter((x) => x.key !== it.key))} className="grid size-8 shrink-0 place-items-center rounded-full text-ink-2 hover:bg-track hover:text-error" aria-label={`حذف ${it.name_raw}`}>

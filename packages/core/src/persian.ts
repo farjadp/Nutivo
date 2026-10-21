@@ -34,6 +34,24 @@ export function normalizeFa(str: string): string {
     .trim();
 }
 
+/** Spoken forms people type → the written form food names use («نون» → «نان»). Whole words only. */
+const COLLOQUIAL: Record<string, string> = {
+  نون: "نان",
+  چایی: "چای",
+  ماس: "ماست",
+  سیبزمینی: "سیب زمینی",
+  تخممرغ: "تخم مرغ",
+  ساندویج: "ساندویچ",
+};
+
+/** normalizeFa plus the spoken → written word swap, for food search only (never for stored text). */
+export function searchFa(str: string): string {
+  return normalizeFa(str)
+    .split(" ")
+    .map((w) => COLLOQUIAL[w] ?? w)
+    .join(" ");
+}
+
 function formatNumberFa(n: number, decimals: number): string {
   const rounded = Number(n.toFixed(decimals));
   const [int, frac] = String(rounded).split(".");

@@ -1,4 +1,4 @@
-import { toPersianDigits, toLatinDigits, normalizeFa, formatGrams, formatKcal, ZWNJ } from "./persian";
+import { toPersianDigits, toLatinDigits, normalizeFa, searchFa, formatGrams, formatKcal, ZWNJ } from "./persian";
 
 describe("persian", () => {
   it("converts digits both ways", () => {
@@ -11,6 +11,13 @@ describe("persian", () => {
   it("normalises Arabic letters, digits and spaces", () => {
     expect(normalizeFa("  كباب   كوبيده  ٢  سيخ ")).toBe("کباب کوبیده 2 سیخ");
     expect(normalizeFa(`قاشق${ZWNJ}چای${ZWNJ}خوری`)).toBe(`قاشق${ZWNJ}چای${ZWNJ}خوری`);
+  });
+
+  it("maps spoken words to written ones for search, whole words only", () => {
+    expect(searchFa("نون")).toBe("نان");
+    expect(searchFa("نون بربری")).toBe("نان بربری");
+    expect(searchFa("چایی")).toBe("چای");
+    expect(searchFa("نونوایی")).toBe("نونوایی");
   });
 
   it("formats grams and kcal with Persian digits", () => {

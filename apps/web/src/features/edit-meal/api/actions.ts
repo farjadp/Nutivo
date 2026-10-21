@@ -1,5 +1,5 @@
 "use server";
-import { macrosForGrams, normalizeFa, roundMacro, type Food, type PortionUnit } from "@nutivo/core";
+import { macrosForGrams, roundMacro, searchFa, type Food, type PortionUnit } from "@nutivo/core";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { foodFromRow, unitFromRow } from "@/entities/food/map";
@@ -12,7 +12,7 @@ export type EditResult = { ok: true } | { ok: false; error: string };
 
 /** Foods for the edit sheet's search, with their local units. Works with or without a session (foods are public). */
 export async function searchFoodsAction(q: string): Promise<{ foods: Food[]; units: Record<string, PortionUnit[]> }> {
-  const term = normalizeFa(q).slice(0, 60);
+  const term = searchFa(q).slice(0, 60);
   if (!isSupabaseConfigured() || term.length < 2) return { foods: [], units: {} };
   const supabase = await createClient();
   const { data: hits } = await supabase.rpc("search_foods", { q: term, lim: 8, exclude_sources: excludedFoodSources() });

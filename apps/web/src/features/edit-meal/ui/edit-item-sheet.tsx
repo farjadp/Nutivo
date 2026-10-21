@@ -138,11 +138,6 @@ export function EditItemSheet({ item, saving, error, onClose, onSave, onDelete }
                 {item.from_photo && <Camera size={12} strokeWidth={2} aria-label="از روی عکس" />}
                 «{item.name_raw}»
                 {food.confidence !== "high" && <span> · داده {food.confidence === "low" ? "کم‌اطمینان" : "تقریبی"}</span>}
-                {food.source === "figfit" && (
-                  <a href="https://figfit.ir" target="_blank" rel="noreferrer" className="underline decoration-dotted underline-offset-2" title="FigFit food database, CC BY-NC-SA 4.0">
-                    · منبع: FigFit
-                  </a>
-                )}
               </p>
             </div>
           </div>
