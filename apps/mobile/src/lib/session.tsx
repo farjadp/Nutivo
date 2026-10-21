@@ -13,6 +13,8 @@ interface SessionState {
   error: string | null;
   refreshMe: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** Switches نوتی on or off for this account (web and bot follow). Returns an error message on failure. */
+  setNuti: (on: boolean) => Promise<string | null>;
 }
 
 const Ctx = createContext<SessionState | null>(null);
@@ -64,6 +66,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, [loadMe]);
 
+  const setNuti = useCallback(async (on: boolean) => {
+    // Show the change at once; put it back if the server didn't take it.
+    setMe((m) => (m ? { ...m, nuti_enabled: on } : m));
+    const r = await api.prefs({ nuti_enabled: on });
+    if (r.ok) return null;
+    setMe((m) => (m ? { ...m, nuti_enabled: !on } : m));
+    return r.error;
+  }, []);
+
   const value: SessionState = {
     ready,
     session,
@@ -77,6 +88,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setSession(null);
       setMe(null);
     },
+    setNuti,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

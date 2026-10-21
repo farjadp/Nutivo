@@ -1,4 +1,4 @@
-import type { AppDay, AppItem, BotResult, DayView, DraftView, Goals, ReportView } from "@nutivo/core";
+import type { AppDay, AppItem, AppProfile, BotResult, DayView, DraftView, Goals, ReportView } from "@nutivo/core";
 import { config } from "./config";
 import { supabase } from "./supabase";
 
@@ -8,6 +8,7 @@ export interface Me {
   email: string | null;
   has_goals: boolean;
   timezone: string;
+  nuti_enabled: boolean;
 }
 
 export interface ProfileInput {
@@ -48,7 +49,13 @@ async function call<T>(action: string, body: object = {}, signal?: AbortSignal):
 
 export const api = {
   me: () => call<Me>("me"),
+  /** First run and later edits: saves the body numbers and recomputes the goals. */
   onboard: (profile: ProfileInput) => call<Goals>("onboard", { profile }),
+  profile: () => call<AppProfile>("profile"),
+  prefs: (p: { nuti_enabled: boolean }) => call<{ nuti_enabled: boolean }>("prefs", p),
+  /** One-time code (15 minutes) that connects this account to the Telegram bot. */
+  linkCode: () => call<{ code: string; url: string | null }>("link_code"),
+  deleteAccount: () => call<{ deleted: true }>("delete_account", { confirm: "حذف" }),
   day: (date?: string) => call<AppDay>("day", { date }),
   /** `now` defaults to this instant; pass another one to log to a past day. */
   draft: (input: { text?: string; photo?: { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" }; now?: string }, signal?: AbortSignal) =>

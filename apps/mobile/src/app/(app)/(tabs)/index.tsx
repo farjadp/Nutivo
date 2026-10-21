@@ -8,6 +8,7 @@ import { DayStrip } from "@/features/day/day-strip";
 import { api } from "@/lib/api";
 import { addDays, faDayLabel, faDayWord, faInt } from "@/lib/format";
 import { MEALS } from "@/lib/meals";
+import { useSession } from "@/lib/session";
 import { useUndo } from "@/lib/undo";
 import { Button } from "@/ui/button";
 import { FoodIconTile } from "@/ui/food-icon";
@@ -115,7 +116,9 @@ export default function Today() {
   );
 
   const isToday = shown === today;
-  const nuti = data && isToday ? situation(data) : null;
+  const nutiOn = useSession().me?.nuti_enabled ?? true;
+  // نوتی off: the day view shows only the numbers (the brand promise is that it can be switched off).
+  const nuti = data && isToday && nutiOn ? situation(data) : null;
   const line = nuti && shown ? nutiSay(nuti.key, nuti.vars, daySeed(shown)) : null;
 
   return (

@@ -1,13 +1,15 @@
 import type { AppDay, NutiMood, ReportView } from "@nutivo/core";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { View } from "react-native";
+import { Sparkles } from "lucide-react-native";
+import { ActivityIndicator, View } from "react-native";
 import Svg, { Rect } from "react-native-svg";
 import { useCSSVariable } from "uniwind";
 import { DayStrip } from "@/features/day/day-strip";
 import { api } from "@/lib/api";
 import { faDayLabel, faInt } from "@/lib/format";
 import { mealLabel } from "@/lib/meals";
+import { useSession } from "@/lib/session";
 import { useUndo } from "@/lib/undo";
 import { Button } from "@/ui/button";
 import { Nuti, NutiSays } from "@/ui/nuti";
@@ -64,6 +66,8 @@ export default function Report() {
   // A day picked on «امروز» arrives as ?date=; the strip here can change it.
   const params = useLocalSearchParams<{ date?: string }>();
   const [date, setDate] = useState<string | undefined>(params.date);
+  const nutiOn = useSession().me?.nuti_enabled ?? true;
+  const purple = useCSSVariable("--color-purple-ink") as string;
   useEffect(() => setDate(params.date), [params.date]);
   const { version } = useUndo();
   const [strip, setStrip] = useState<AppDay["strip"] | null>(null);
@@ -103,8 +107,8 @@ export default function Report() {
 
       {loading && (
         <View accessibilityLiveRegion="polite" className="items-center gap-3 rounded-card bg-purple-tint p-6">
-          <Nuti mood="chew" size={72} />
-          <Text className="text-[15px] text-purple-ink">دارم گزارشت رو می‌نویسم…</Text>
+          {nutiOn ? <Nuti mood="chew" size={72} /> : <ActivityIndicator colorClassName="accent-purple-ink" />}
+          <Text className="text-[15px] text-purple-ink">{nutiOn ? "دارم گزارشت رو می‌نویسم…" : "در حال نوشتن گزارش…"}</Text>
         </View>
       )}
 
@@ -117,7 +121,11 @@ export default function Report() {
 
       {r && f && !loading && !f.logged && (
         <View className="gap-4">
-          <NutiSays mood="sleepy" text="برای این روز چیزی ثبت نشده. هر وقت چیزی بخوری و ثبت کنی، گزارشش اینجاست." />
+          {nutiOn ? (
+            <NutiSays mood="sleepy" text="برای این روز چیزی ثبت نشده. هر وقت چیزی بخوری و ثبت کنی، گزارشش اینجاست." />
+          ) : (
+            <Text className="text-[15px] leading-7 text-ink-2">برای این روز چیزی ثبت نشده. وقتی وعده‌ای ثبت کنی، گزارشش اینجا می‌آید.</Text>
+          )}
           <Button label="ثبت وعده" onPress={() => router.push(r.date === today ? "/log" : { pathname: "/log", params: { date: r.date } })} />
         </View>
       )}
@@ -159,8 +167,8 @@ export default function Report() {
           {r.analysis ? (
             <View accessibilityRole="summary" className="gap-3 rounded-card bg-purple-tint p-4">
               <View className="flex-row items-center gap-2">
-                <Nuti mood={MOOD[f.kcal.status]} size={44} />
-                <Text className="font-strong text-base text-purple-ink">تحلیل نوتی</Text>
+                {nutiOn ? <Nuti mood={MOOD[f.kcal.status]} size={44} /> : <Sparkles color={purple} size={20} />}
+                <Text className="font-strong text-base text-purple-ink">{nutiOn ? "تحلیل نوتی" : "تحلیل Nutivo"}</Text>
               </View>
               {r.analysis.analysis.map((p, i) => (
                 <Text key={i} className="text-[15px] leading-7">{p}</Text>
