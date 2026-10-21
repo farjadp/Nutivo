@@ -1,13 +1,14 @@
 import { toPersianDigits, type AppProfile } from "@nutivo/core";
 import Constants from "expo-constants";
 import { router, useFocusEffect } from "expo-router";
-import { ChevronLeft, Globe, KeyRound, LogOut, MessageCircle, Phone, Send, Target, Trash2 } from "lucide-react-native";
+import { ChevronLeft, FileText, Globe, KeyRound, LogOut, MessageCircle, Phone, Send, ShieldCheck, Target, Trash2 } from "lucide-react-native";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ActivityIndicator, Alert, Linking, Pressable, Text as RNText, Switch, View } from "react-native";
 import { useCSSVariable } from "uniwind";
 import { HealthRow, WeightSuggestion } from "@/features/health/health-rows";
 import { ReminderRows } from "@/features/reminders/reminder-rows";
 import { api } from "@/lib/api";
+import { config } from "@/lib/config";
 import { faInt } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { Nakhonak } from "@/ui/nakhonak";
@@ -264,6 +265,10 @@ export default function Me() {
         <Row icon={<Phone color={green} size={20} />} label="تلفن و واتس‌اپ" detail={SUPPORT.phoneLabel} onPress={() => Linking.openURL(`tel:${SUPPORT.phone}`)} />
         <Divider />
         <Row icon={<Globe color={green} size={20} />} label="وب‌سایت" detail="farjadp.com" onPress={() => Linking.openURL(SUPPORT.site)} />
+        <Divider />
+        <Row icon={<ShieldCheck color={green} size={20} />} label="حریم خصوصی" onPress={() => Linking.openURL(`${config.apiUrl}/privacy`)} />
+        <Divider />
+        <Row icon={<FileText color={green} size={20} />} label="شرایط استفاده" onPress={() => Linking.openURL(`${config.apiUrl}/terms`)} />
       </Section>
 
       <Section>

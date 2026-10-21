@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { foodFromRow, unitFromRow } from "@/entities/food/map";
 import { logEvent } from "@/lib/server/log";
+import { removeMealPhotos } from "@/lib/server/photos";
 import { createClient } from "@/lib/supabase/server";
 import { excludedFoodSources, isAuthDisabled, isSupabaseConfigured } from "@/shared/config";
 
@@ -95,8 +96,9 @@ export async function deleteEntryAction(entryId: string): Promise<EditResult> {
   if (!z.string().uuid().safeParse(entryId).success) return { ok: false, error: "شناسه معتبر نیست." };
   const { supabase, user } = await requireUser();
   if (!user) return { ok: false, error: "برای حذف باید وارد حساب شوی." };
-  const { data: gone, error } = await supabase.from("meal_entries").delete().eq("id", entryId).select("id");
+  const { data: gone, error } = await supabase.from("meal_entries").delete().eq("id", entryId).select("id, photo_path");
   if (error || !gone?.length) return { ok: false, error: "برگرداندن انجام نشد." };
+  await removeMealPhotos(gone.map((g) => g.photo_path as string | null));
   void logEvent({ kind: "activity", event: "meal.entry_undone", actor_id: user.id, actor_email: user.email, entity: "meal_entry", entity_id: entryId });
   revalidatePath("/today");
   return { ok: true };
@@ -113,7 +115,10 @@ export async function deleteEntryItemAction(itemId: string): Promise<EditResult>
   if (error || !gone?.length) return { ok: false, error: "حذف انجام نشد." };
   const entryId = gone[0]!.entry_id as string;
   const { count } = await supabase.from("entry_items").select("id", { count: "exact", head: true }).eq("entry_id", entryId);
-  if (!count) await supabase.from("meal_entries").delete().eq("id", entryId);
+  if (!count) {
+    const { data: entry } = await supabase.from("meal_entries").delete().eq("id", entryId).select("photo_path");
+    await removeMealPhotos((entry ?? []).map((e) => e.photo_path as string | null));
+  }
 
   void logEvent({ kind: "activity", event: "meal.item_deleted", actor_id: user.id, actor_email: user.email, entity: "entry_item", entity_id: itemId, message: String(gone[0]!.name_raw ?? "") });
   revalidatePath("/today");

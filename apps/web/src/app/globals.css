@@ -166,3 +166,14 @@ input { caret-color: var(--green-ink); }
   .nuti .nuti-body, .nuti .nuti-pt-l, .nuti .nuti-pt-r, .nuti .nuti-eye, .nuti .nuti-chew, .nuti .nuti-z { animation: none; }
   .nuti-bit { display: none; }
 }
+
+/* Long-form legal pages (privacy, terms, support, account deletion) */
+.legal h1 { font-size: 1.75rem; font-weight: 800; line-height: 1.4; }
+.legal h2 { font-size: 1.15rem; font-weight: 700; margin-top: 0.75rem; }
+.legal p, .legal li { font-size: 15px; line-height: 2; }
+.legal ul, .legal ol { display: grid; gap: 0.35rem; padding-inline-start: 1.25rem; }
+.legal ul { list-style: disc; }
+.legal ol { list-style: decimal; }
+.legal a { color: var(--green-ink); text-decoration: underline; text-underline-offset: 3px; }
+.legal section { display: grid; gap: 0.6rem; }
+.legal .meta { font-size: 13px; color: var(--ink-2); }

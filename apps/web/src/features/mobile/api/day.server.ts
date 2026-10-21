@@ -5,6 +5,7 @@ import { dayView, type Linked } from "@/features/bot/api/service.server";
 import { loadDayFor } from "@/features/today/api/load-day.server";
 import { DAY_WINDOW, statsComplete } from "@/features/today/model/day";
 import { logEvent } from "@/lib/server/log";
+import { removeMealPhotos } from "@/lib/server/photos";
 import { adminClient } from "@/lib/supabase/admin";
 import { addDays } from "@/shared/lib/format";
 
@@ -122,7 +123,10 @@ export async function deleteItem(user: Linked, itemId: string): Promise<BotResul
   if (error || !gone?.length) return fail("حذف انجام نشد.", "server");
   const entryId = gone[0]!.entry_id as string;
   const { count } = await db().from("entry_items").select("id", { count: "exact", head: true }).eq("entry_id", entryId);
-  if (!count) await db().from("meal_entries").delete().eq("id", entryId).eq("user_id", user.userId);
+  if (!count) {
+    const { data: entry } = await db().from("meal_entries").delete().eq("id", entryId).eq("user_id", user.userId).select("photo_path");
+    await removeMealPhotos((entry ?? []).map((e) => e.photo_path as string | null));
+  }
   void logEvent({ kind: "activity", event: "meal.item_deleted", actor_id: user.userId, entity: "entry_item", entity_id: itemId, message: String(gone[0]!.name_raw ?? ""), meta: { channel: "mobile" } });
   return { ok: true, data: { deleted: true } };
 }

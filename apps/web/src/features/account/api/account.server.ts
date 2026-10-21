@@ -43,11 +43,13 @@ export async function setNutiEnabled(userId: string, on: boolean): Promise<boole
 
 /**
  * Removes the account and everything tied to it: meals, reports, Telegram link (all cascade from
- * auth.users) and meal photos in storage, which don't cascade. Activity logs stay (no foreign key).
+ * auth.users) and meal photos in storage, which don't cascade. Activity logs stay for the admin
+ * counts but lose the email and any free text, so nothing in them points back to the person.
  */
 export async function deleteAccountData(userId: string): Promise<boolean> {
   const db = adminClient();
   const { data: folders } = await db.storage.from("meal-photos").list(userId, { limit: 1000 });
+  const { data: link } = await db.from("telegram_links").select("telegram_id").eq("user_id", userId).maybeSingle();
   const { error } = await db.auth.admin.deleteUser(userId);
   if (error) return false;
   // Photos live under <user>/<date>/<file>; the first listing returns the date folders.
@@ -55,5 +57,8 @@ export async function deleteAccountData(userId: string): Promise<boolean> {
     const { data: files } = await db.storage.from("meal-photos").list(`${userId}/${folder.name}`, { limit: 1000 });
     if (files?.length) await db.storage.from("meal-photos").remove(files.map((f) => `${userId}/${folder.name}/${f.name}`));
   }
+  // bot_sessions is keyed by Telegram id, not the account, so it doesn't cascade.
+  if (link?.telegram_id) await db.from("bot_sessions").delete().eq("telegram_id", link.telegram_id);
+  await db.from("activity_log").update({ actor_email: null, message: null }).eq("actor_id", userId);
   return true;
 }

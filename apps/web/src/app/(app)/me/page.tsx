@@ -1,4 +1,4 @@
-import { ChevronLeft, Globe, KeyRound, LogOut, MessageCircle, Phone, Shield, Target } from "lucide-react";
+import { ChevronLeft, FileText, Globe, KeyRound, LogOut, MessageCircle, Phone, Shield, ShieldCheck, Target } from "lucide-react";
 import Link from "next/link";
 import { DeleteAccount } from "@/features/account/ui/delete-account";
 import { signOutAction } from "@/features/auth/actions";
@@ -45,6 +45,8 @@ const SUPPORT = [
   { href: "https://t.me/farjadtalks", label: "تلگرام", detail: "@farjadtalks", Icon: MessageCircle },
   { href: "tel:+14376611674", label: "تلفن و واتس‌اپ", detail: "+1 437 661 1674", Icon: Phone },
   { href: "https://www.farjadp.com", label: "وب‌سایت", detail: "farjadp.com", Icon: Globe },
+  { href: "/privacy", label: "حریم خصوصی", detail: "", Icon: ShieldCheck },
+  { href: "/terms", label: "شرایط استفاده", detail: "", Icon: FileText },
 ];
 
 export const metadata = { title: "من · Nutivo" };
@@ -113,7 +115,7 @@ export default async function MePage() {
                 <span className="grid size-9 place-items-center rounded-full bg-mint text-green-ink"><Icon size={17} strokeWidth={2} aria-hidden /></span>
                 <span className="flex-1">
                   <span className="block text-[15px] font-semibold">{label}</span>
-                  <bdi dir="ltr" className="block text-right text-xs text-ink-2">{detail}</bdi>
+                  {detail && <bdi dir="ltr" className="block text-right text-xs text-ink-2">{detail}</bdi>}
                 </span>
                 <ChevronLeft size={18} strokeWidth={1.75} className="text-ink-2" aria-hidden />
               </a>

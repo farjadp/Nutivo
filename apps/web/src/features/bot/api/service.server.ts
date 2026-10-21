@@ -25,6 +25,7 @@ import { buildDailyReport, reportFacts, type ReportView } from "@nutivo/core";
 import { faDayWord } from "@/shared/lib/format";
 import { nutiEnabledFor } from "@/features/account/api/account.server";
 import { logEvent } from "@/lib/server/log";
+import { removeMealPhotos } from "@/lib/server/photos";
 import { dayCardSvg, renderPng } from "./card.server";
 import { adminClient } from "@/lib/supabase/admin";
 import type { BotResult, DayView, DraftView, TgUser } from "@nutivo/core";
@@ -296,8 +297,9 @@ export async function cancelDraft(user: Linked, id: string): Promise<BotResult<{
 
 /** Undo a saved meal (the «برگردان» button under the confirmation). */
 export async function undoEntry(user: Linked, entryId: string): Promise<BotResult<{ undone: true }>> {
-  const { data } = await db().from("meal_entries").delete().eq("id", entryId).eq("user_id", user.userId).select("id");
+  const { data } = await db().from("meal_entries").delete().eq("id", entryId).eq("user_id", user.userId).select("id, photo_path");
   if (!data?.length) return fail("این وعده دیگر قابل برگرداندن نیست.", "not_found");
+  await removeMealPhotos(data.map((d) => d.photo_path as string | null));
   void logEvent({ kind: "activity", event: "meal.entry_undone", actor_id: user.userId, entity: "meal_entry", entity_id: entryId, meta: { channel: channelOf(user) } });
   return { ok: true, data: { undone: true } };
 }

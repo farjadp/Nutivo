@@ -3,7 +3,7 @@
     "name": "Nutivo",
     "slug": "nutivo",
     "scheme": "nutivo",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/brand/icon.png",
     "userInterfaceStyle": "automatic",
@@ -12,7 +12,14 @@
       "supportsTablet": false,
       "infoPlist": {
         "CFBundleDevelopmentRegion": "fa",
-        "CFBundleAllowMixedLocalizations": true
+        "CFBundleAllowMixedLocalizations": true,
+        "ExpoLocalization_supportsRTL": true,
+        "ExpoLocalization_forcesRTL": true
+      },
+      "appleTeamId": "JN57DU6B4M",
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
@@ -27,6 +34,12 @@
         "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
         "android.permission.health.READ_STEPS",
         "android.permission.health.READ_WEIGHT"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ]
     },
     "plugins": [
@@ -91,10 +104,15 @@
     ],
     "extra": {
       "supportsRTL": true,
-      "forcesRTL": true
+      "forcesRTL": true,
+      "router": {},
+      "eas": {
+        "projectId": "116c196b-a53c-46f0-ad82-2ba1a90f797e"
+      }
     },
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "owner": "ashavid"
   }
 }

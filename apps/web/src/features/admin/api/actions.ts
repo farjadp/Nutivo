@@ -68,7 +68,7 @@ export async function deleteUserAction(userId: string, typedEmail: string): Prom
   const email = data.user?.email ?? "";
   if (!email || email.toLowerCase() !== typedEmail.trim().toLowerCase()) return { ok: false, error: "ایمیل واردشده با ایمیل کاربر یکی نیست." };
   if (!(await deleteAccountData(userId))) return { ok: false, error: "حذف کاربر انجام نشد." };
-  await logEvent({ kind: "activity", level: "warn", event: "admin.user_deleted", ...actorOf(ctx), entity: "user", entity_id: userId, message: email });
+  await logEvent({ kind: "activity", level: "warn", event: "admin.user_deleted", ...actorOf(ctx), entity: "user", entity_id: userId });
   revalidatePath("/admin/users");
   return { ok: true, message: "کاربر و همه داده‌هایش حذف شد." };
 }

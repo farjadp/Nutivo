@@ -11,6 +11,7 @@ import { markNakhonakSent, nakhonakToday } from "@/features/nakhonak/api/nakhona
 import { nakhonakTelegram } from "@/features/nakhonak/model/telegram";
 import { reportCaption } from "@nutivo/core";
 import { logEvent } from "@/lib/server/log";
+import { removeMealPhotos } from "@/lib/server/photos";
 import { adminClient, isAdminConfigured } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -95,7 +96,8 @@ export async function GET(request: Request) {
   }
 
   // Housekeeping: Telegram drafts nobody confirmed, and expired link codes.
-  await db.from("bot_drafts").delete().lt("expires_at", now.toISOString());
+  const { data: stale } = await db.from("bot_drafts").delete().lt("expires_at", now.toISOString()).select("draft");
+  await removeMealPhotos((stale ?? []).map((d) => (d.draft as { photo_path?: string | null } | null)?.photo_path));
   await db.from("link_codes").delete().lt("expires_at", now.toISOString());
 
   void logEvent({ kind: "system", event: "cron.nightly", message: `${generated} generated, ${skipped} skipped, ${failed} failed, ${pushed} sent to Telegram, ${stories} ناخنک stories`, meta: { due: due.length } });

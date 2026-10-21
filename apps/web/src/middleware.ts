@@ -1,6 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+/** Store reviewers and signed-out visitors must reach these. */
+const LEGAL_PAGES = ["/privacy", "/terms", "/support", "/delete-account"];
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
   // Review mode without login (development only).
@@ -23,7 +26,7 @@ export async function middleware(request: NextRequest) {
   );
   const { data } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
-  const isPublic = path.startsWith("/login") || path.startsWith("/auth") || path.startsWith("/api/cron") || path.startsWith("/api/bot") || path.startsWith("/api/app") || (process.env.NODE_ENV !== "production" && path.startsWith("/dev"));
+  const isPublic = LEGAL_PAGES.includes(path) || path.startsWith("/login") || path.startsWith("/auth") || path.startsWith("/api/cron") || path.startsWith("/api/bot") || path.startsWith("/api/app") || (process.env.NODE_ENV !== "production" && path.startsWith("/dev"));
   if (!data.user && !isPublic) {
     const to = request.nextUrl.clone();
     to.pathname = "/login";
