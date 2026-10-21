@@ -249,7 +249,7 @@ subject = "کد ورود Nutivo"
 content_path = "./supabase/templates/magic_link.html"
 
 [auth.email.template.confirmation]
-subject = "کد ورود Nutivo"
+subject = "به Nutivo خوش آمدی · کد ورود"
 content_path = "./supabase/templates/confirmation.html"
 
 # Uncomment to customize email template
@@ -421,3 +421,28 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# Cloud project (production). `supabase config push --project-ref jspcgzwdowgzmcpcstnu` applies these over the
+# local values above; the email templates and subjects come from the [auth.email.template.*] blocks.
+[remotes.production]
+project_id = "jspcgzwdowgzmcpcstnu"
+
+[remotes.production.auth]
+site_url = "https://web-production-32973.up.railway.app"
+additional_redirect_urls = ["https://web-production-32973.up.railway.app/auth/callback"]
+# Keep the cloud's own values for everything else the local file declares.
+[remotes.production.auth.email]
+enable_confirmations = true
+max_frequency = "1m0s"
+
+[remotes.production.auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[remotes.production.db.pooler]
+default_pool_size = 15
+max_client_conn = 200
+
+[remotes.production.storage.analytics]
+enabled = true
+max_namespaces = 10

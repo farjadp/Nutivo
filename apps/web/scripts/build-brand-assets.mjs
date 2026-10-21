@@ -44,6 +44,9 @@ writeFileSync(path.join(pub, "brand/nutivo-icon-white.svg"), white(icon));
 writeFileSync(path.join(pub, "brand/nutivo-lockup.svg"), lockup);
 writeFileSync(path.join(pub, "brand/nutivo-lockup-white.svg"), white(lockup));
 
+// Emails: most mail apps block SVG, so the lockup ships as a PNG at 2x of its 160px display width
+png(lockup, path.join(pub, "brand/nutivo-lockup-email.png"), 320);
+
 // Server-side renderers (the Telegram day card) read these from disk
 mkdirSync(path.join(root, "apps/web/assets/brand"), { recursive: true });
 writeFileSync(path.join(root, "apps/web/assets/brand/nutivo-lockup.svg"), lockup);
