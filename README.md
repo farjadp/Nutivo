@@ -139,7 +139,7 @@ The Persian food table in `packages/db/seed/foods_fa.csv` is reviewed by hand, a
 
 ## License
 
-No license has been chosen yet, so all rights are reserved by default. Please ask before reusing any part of this code or the Nutivo brand.
+Copyright © 2026 Farjad P.D. All rights reserved. This repository is public for reference only; no license is granted to use, copy, modify or distribute the code or the Nutivo brand without written permission.
 
 ## Credits
 
@@ -236,7 +236,7 @@ Built by [Farjad P.D](https://farjadp.com) with Claude Code. Nutrition data from
 
 ## مجوز
 
-هنوز مجوزی انتخاب نشده و به‌طور پیش‌فرض همه حقوق محفوظ است. پیش از استفاده دوباره از هر بخش کد یا برند نوتیوو، لطفاً اجازه بگیرید.
+همه حقوق برای فرجاد پ.د محفوظ است (۲۰۲۶). این مخزن فقط برای مطالعه عمومی است و استفاده، کپی، تغییر یا انتشار کد یا برند نوتیوو بدون اجازه کتبی مجاز نیست.
 
 ## سازندگان
 
