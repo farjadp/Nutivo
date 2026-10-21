@@ -25,7 +25,7 @@ function Card({ n, title, children }: { n: string; title: string; children: Reac
         <View className="size-6 items-center justify-center rounded-full bg-mint">
           <Text className="font-heavy text-[12px] text-green-ink">{n}</Text>
         </View>
-        <Text className="font-strong text-base">{title}</Text>
+        <Text accessibilityRole="header" className="font-strong text-base">{title}</Text>
       </View>
       {children}
     </View>
@@ -165,16 +165,17 @@ export default function Report() {
           )}
 
           {r.analysis ? (
-            <View accessibilityRole="summary" className="gap-3 rounded-card bg-purple-tint p-4">
+            <View className="gap-3 rounded-card bg-purple-tint p-4">
               <View className="flex-row items-center gap-2">
                 {nutiOn ? <Nuti mood={MOOD[f.kcal.status]} size={44} /> : <Sparkles color={purple} size={20} />}
-                <Text className="font-strong text-base text-purple-ink">{nutiOn ? "تحلیل نوتی" : "تحلیل Nutivo"}</Text>
+                <Text accessibilityRole="header" className="font-strong text-base text-purple-ink">{nutiOn ? "تحلیل نوتی" : "تحلیل Nutivo"}</Text>
               </View>
               {r.analysis.analysis.map((p, i) => (
                 <Text key={i} className="text-[15px] leading-7">{p}</Text>
               ))}
-              <View className="gap-1.5 rounded-btn bg-surface p-3">
-                <Text className="font-strong text-sm text-purple-ink">برای فردا</Text>
+              {/* A divider, not a card inside the card. */}
+              <View className="gap-1.5 border-t border-purple/20 pt-3">
+                <Text accessibilityRole="header" className="font-strong text-sm text-purple-ink">برای فردا</Text>
                 {r.analysis.tomorrow.map((t, i) => (
                   <Text key={i} className="text-sm leading-6">• {t}</Text>
                 ))}

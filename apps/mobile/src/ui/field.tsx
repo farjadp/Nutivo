@@ -15,7 +15,7 @@ export function Field({ label, unit, ltr = false, className = "", onFocus, onBlu
   return (
     <View className={`gap-1.5 ${className}`}>
       <Text className="font-strong text-sm">{label}</Text>
-      <View className={`h-12 flex-row items-center gap-2 rounded-btn border bg-surface px-3 ${focused ? "border-green" : "border-line"}`}>
+      <View className={`min-h-12 flex-row items-center gap-2 rounded-btn border bg-surface px-3 ${focused ? "border-green" : "border-line"}`}>
         <TextInput
           accessibilityLabel={label}
           placeholderTextColorClassName="accent-ink-2"

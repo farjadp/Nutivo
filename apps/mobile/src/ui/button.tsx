@@ -18,7 +18,7 @@ export function Button({ label, busyLabel, busy = false, variant = "primary", di
       accessibilityRole="button"
       accessibilityState={{ disabled: off, busy }}
       disabled={off}
-      className={`h-12 flex-row items-center justify-center gap-2 rounded-btn px-4 active:opacity-80 ${box} ${off ? "opacity-60" : ""} ${className}`}
+      className={`min-h-12 flex-row items-center justify-center gap-2 rounded-btn px-4 py-2 active:opacity-80 ${box} ${off ? "opacity-60" : ""} ${className}`}
       {...props}
     >
       {busy && <ActivityIndicator size="small" colorClassName={variant === "primary" ? "accent-on-green" : "accent-ink"} />}

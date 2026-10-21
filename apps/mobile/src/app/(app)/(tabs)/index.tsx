@@ -21,7 +21,14 @@ import { Text } from "@/ui/text";
 function Macro({ label, value, goal, bar, ink }: { label: string; value: number; goal: number; bar: string; ink: string }) {
   const pct = goal > 0 ? Math.min(100, Math.round((value / goal) * 100)) : 0;
   return (
-    <View className="flex-1 gap-1.5">
+    // One stop for screen readers: «پروتئین، ۴۰ از ۱۲۰ گرم» instead of three loose numbers.
+    <View
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      accessibilityValue={{ min: 0, max: Math.round(goal), now: Math.round(value), text: `${faInt(value)} از ${faInt(goal)} گرم` }}
+      className="flex-1 gap-1.5"
+    >
       <View className="flex-row items-baseline justify-between">
         <Text className="text-xs text-ink-2">{label}</Text>
         <Text className={`font-strong text-xs ${ink}`}>
@@ -53,7 +60,7 @@ function ItemRow({ it }: { it: AppItem }) {
       accessibilityRole="button"
       accessibilityLabel={`${it.name}، ${faInt(it.kcal)} کالری. ویرایش`}
       onPress={() => router.push({ pathname: "/item/[id]", params: { id: it.id } })}
-      className="flex-row items-center gap-3 rounded-btn py-1.5 active:bg-track"
+      className="min-h-11 flex-row items-center gap-3 rounded-btn py-1.5 active:bg-track"
     >
       <FoodIconTile name={it.name} estimated={it.estimated} />
       <View className="min-w-0 flex-1">
@@ -156,18 +163,20 @@ export default function Today() {
             <View className="flex-row items-center justify-between self-stretch">
               <View>
                 {/* «امروز» / «دیروز» get the date underneath; older days show the date as the title. */}
-                <Text className="font-strong text-base">{["امروز", "دیروز"].includes(faDayWord(shown, today)) ? faDayWord(shown, today) : faDayLabel(shown)}</Text>
+                <Text accessibilityRole="header" className="font-strong text-base">{["امروز", "دیروز"].includes(faDayWord(shown, today)) ? faDayWord(shown, today) : faDayLabel(shown)}</Text>
                 {faDayWord(shown, today) === "دیروز" && <Text className="text-xs text-ink-2">{faDayLabel(shown)}</Text>}
               </View>
               <View className="flex-row items-center gap-2">
                 {!isToday && (
-                  <Pressable accessibilityRole="button" onPress={() => setDate(today)} className="min-h-9 justify-center rounded-full bg-mint px-3 active:opacity-80">
+                  <Pressable accessibilityRole="button" onPress={() => setDate(today)} hitSlop={6} className="min-h-9 justify-center rounded-full bg-mint px-3 active:opacity-80">
                     <Text className="font-strong text-xs text-green-ink">برو به امروز</Text>
                   </Pressable>
                 )}
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityLabel={`گزارش ${faDayWord(shown, today)}`}
                   onPress={() => router.navigate({ pathname: "/report", params: { date: shown } })}
+                  hitSlop={6}
                   className="min-h-9 justify-center rounded-full bg-purple-tint px-3 active:opacity-80"
                 >
                   <Text className="font-strong text-xs text-purple-ink">گزارش</Text>
@@ -202,7 +211,7 @@ export default function Today() {
                 return (
                   <View key={v} className="gap-1 rounded-card border border-line bg-surface p-4">
                     <View className="mb-1 flex-row justify-between">
-                      <Text className="font-strong text-[15px]">{l}</Text>
+                      <Text accessibilityRole="header" className="font-strong text-[15px]">{l}</Text>
                       <Text className="text-sm text-ink-2">{faInt(kcal)} کالری</Text>
                     </View>
                     {list.map((it) => (
@@ -216,7 +225,8 @@ export default function Today() {
           ) : (
             !isToday && (
               <View className="rounded-card bg-track p-4">
-                <Text className="text-sm leading-6 text-ink-2">برای این روز چیزی ثبت نشده.</Text>
+                {/* ink-2 on track is about 4.3:1, below AA for small text; full ink passes. */}
+                <Text className="text-sm leading-6 text-ink">برای این روز چیزی ثبت نشده.</Text>
               </View>
             )
           )}

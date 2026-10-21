@@ -2,9 +2,12 @@ import { toLatinDigits, toPersianDigits, type AppItem } from "@nutivo/core";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
 import { useEffect, useState } from "react";
+import { Minus, Plus, X } from "lucide-react-native";
 import { ActivityIndicator, Alert, Pressable, View } from "react-native";
+import { useCSSVariable } from "uniwind";
 import { api } from "@/lib/api";
 import { faInt } from "@/lib/format";
+import { mealLabel } from "@/lib/meals";
 import { useUndo } from "@/lib/undo";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
@@ -17,9 +20,10 @@ const qtyFa = (n: number) => toPersianDigits(+n.toFixed(2)).replace(".", "٫");
 const step = (q: number) => (q >= 1 ? 1 : 0.5);
 
 function CloseButton() {
+  const ink2 = useCSSVariable("--color-ink-2") as string;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel="بستن" onPress={() => router.back()} className="size-11 items-center justify-center rounded-full active:bg-track">
-      <Text className="text-xl text-ink-2">×</Text>
+      <X color={ink2} size={22} />
     </Pressable>
   );
 }
@@ -58,6 +62,7 @@ export default function EditItemScreen() {
 function EditItem({ item }: { item: AppItem }) {
   const { refresh } = useUndo();
   const navigation = useNavigation();
+  const ink2 = useCSSVariable("--color-ink-2") as string;
   const [units, setUnits] = useState<string[]>([]);
   const [unit, setUnit] = useState(item.unit === GRAM ? GRAM : item.unit);
   const [qty, setQty] = useState(item.unit === GRAM ? 1 : item.qty);
@@ -96,8 +101,8 @@ function EditItem({ item }: { item: AppItem }) {
   }
 
   function remove() {
-    Alert.alert(`حذف ${item.name}؟`, "این آیتم از وعده برداشته می‌شود.", [
-      { text: "انصراف", style: "cancel" },
+    Alert.alert(`حذف ${item.name}؟`, `از ${mealLabel(item.meal_type)} برداشته می‌شود.`, [
+      { text: "نگه دار", style: "cancel" },
       {
         text: "حذف",
         style: "destructive",
@@ -115,16 +120,20 @@ function EditItem({ item }: { item: AppItem }) {
 
   return (
     <Screen>
-      <View className="flex-row items-center justify-between">
-        <Text className="font-heavy text-[22px] leading-[34px]">ویرایش</Text>
+      {/* The food is the title, so the context stays once the user scrolls. */}
+      <View className="flex-row items-center justify-between gap-3">
+        <View className="min-w-0 flex-1">
+          <Text className="text-xs text-ink-2">ویرایش · {mealLabel(item.meal_type)}</Text>
+          <Text accessibilityRole="header" numberOfLines={2} className="font-heavy text-[22px] leading-[34px]">{item.name}</Text>
+        </View>
         <CloseButton />
       </View>
 
       <View className="flex-row items-center gap-3 rounded-card border border-line bg-surface p-4">
         <FoodIconTile name={item.name} estimated={item.estimated} />
         <View className="flex-1 gap-0.5">
-          <Text className="font-strong text-[16px]">{item.name}</Text>
-          <Text className="text-xs text-ink-2">«{item.said}» · الان {item.estimated ? "≈ " : ""}{faInt(item.kcal)} کالری</Text>
+          <Text className="font-strong text-[16px]">الان {item.estimated ? "≈ " : ""}{faInt(item.kcal)} کالری</Text>
+          <Text className="text-xs text-ink-2">نوشته بودی «{item.said}»</Text>
         </View>
       </View>
 
@@ -139,7 +148,7 @@ function EditItem({ item }: { item: AppItem }) {
                 accessibilityRole="radio"
                 accessibilityState={{ checked: on }}
                 onPress={() => setUnit(u)}
-                className={`rounded-full border px-3.5 py-2 ${on ? "border-green bg-mint" : "border-line bg-surface"}`}
+                className={`min-h-11 justify-center rounded-full border px-3.5 ${on ? "border-green bg-mint" : "border-line bg-surface"}`}
               >
                 <Text className={`text-sm ${on ? "font-strong text-green-ink" : ""}`}>{u}</Text>
               </Pressable>
@@ -154,12 +163,12 @@ function EditItem({ item }: { item: AppItem }) {
         <View className="gap-2">
           <Text className="font-strong text-sm">مقدار</Text>
           <View className="flex-row items-center self-start overflow-hidden rounded-btn border border-line bg-surface">
-            <Pressable accessibilityRole="button" accessibilityLabel="کم کن" onPress={() => setQty((q) => Math.max(0.5, +(q - step(q > 1 ? q : 0.5)).toFixed(2)))} className="size-12 items-center justify-center active:bg-track">
-              <Text className="font-strong text-xl text-ink-2">−</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={`کم کردن ${item.name}`} onPress={() => setQty((q) => Math.max(0.5, +(q - step(q > 1 ? q : 0.5)).toFixed(2)))} className="size-12 items-center justify-center active:bg-track">
+              <Minus color={ink2} size={20} />
             </Pressable>
-            <Text className="min-w-16 text-center text-lg">{qtyFa(qty)}</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="زیاد کن" onPress={() => setQty((q) => +(q + step(q)).toFixed(2))} className="size-12 items-center justify-center active:bg-track">
-              <Text className="font-strong text-xl text-ink-2">+</Text>
+            <Text accessibilityLiveRegion="polite" className="min-w-16 text-center text-lg">{qtyFa(qty)}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={`زیاد کردن ${item.name}`} onPress={() => setQty((q) => +(q + step(q)).toFixed(2))} className="size-12 items-center justify-center active:bg-track">
+              <Plus color={ink2} size={20} />
             </Pressable>
           </View>
           <Text className="text-xs leading-6 text-ink-2">وزن از جدول واحدهای همین غذا حساب می‌شود.</Text>
@@ -168,8 +177,8 @@ function EditItem({ item }: { item: AppItem }) {
 
       {error && <Text accessibilityRole="alert" className="text-sm text-error">{error}</Text>}
       <Button label="ذخیره" busyLabel="در حال ذخیره…" busy={busy} disabled={unit === GRAM && !(g > 0 && g <= 5000)} onPress={save} />
-      <Pressable accessibilityRole="button" disabled={busy} onPress={remove} className="items-center py-3 active:opacity-70">
-        <Text className="font-strong text-sm text-error">حذف این غذا</Text>
+      <Pressable accessibilityRole="button" disabled={busy} onPress={remove} className="min-h-11 items-center justify-center active:opacity-70">
+        <Text className="font-strong text-sm text-error">حذف {item.name}</Text>
       </Pressable>
     </Screen>
   );

@@ -97,7 +97,7 @@ export function ProfileForm({ initial, submitLabel, onSubmit, onDirtyChange }: P
       <Chips label="جنسیت" value={sex} onChange={setSex} options={[{ v: "male", l: "مرد" }, { v: "female", l: "زن" }]} />
       <View className="flex-row gap-3">
         <Field className="flex-1" label="سن" unit="سال" placeholder="۳۵" value={age} onChangeText={setAge} keyboardType="number-pad" maxLength={3} />
-        <Field className="flex-1" label="قد" unit="سانت" placeholder="۱۷۰" value={height} onChangeText={setHeight} keyboardType="decimal-pad" maxLength={5} />
+        <Field className="flex-1" label="قد" unit="سانتی‌متر" placeholder="۱۷۰" value={height} onChangeText={setHeight} keyboardType="decimal-pad" maxLength={5} />
         <Field className="flex-1" label="وزن" unit="کیلو" placeholder="۷۰" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" maxLength={5} />
       </View>
       <Chips label="میزان فعالیت" value={activity} onChange={setActivity} options={ACTIVITY} />

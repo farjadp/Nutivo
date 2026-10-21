@@ -2,7 +2,9 @@ import type { DraftView } from "@nutivo/core";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Image, Pressable, TextInput, View } from "react-native";
+import { X } from "lucide-react-native";
+import { ActivityIndicator, Alert, Image, Linking, Pressable, TextInput, View } from "react-native";
+import { useCSSVariable } from "uniwind";
 import { api, type DraftChange } from "@/lib/api";
 import { atTimeOn, faDayWord, localToday } from "@/lib/format";
 import { mealLabel } from "@/lib/meals";
@@ -13,6 +15,15 @@ import { Button } from "@/ui/button";
 import { Screen } from "@/ui/screen";
 import { Text } from "@/ui/text";
 import { toPersianDigits } from "@nutivo/core";
+
+/** Why «ثبت» is off, named, instead of one generic instruction on the disabled button. */
+function notReadyHint(d: DraftView): string | null {
+  if (d.ready || !d.items.length) return null;
+  const missing = d.items.find((it) => !it.food);
+  if (missing) return `«${missing.said}» در فهرست غذاها پیدا نشد؛ حذفش کن یا دوباره با اسم دیگری بنویس.`;
+  const noGrams = d.items.filter((it) => it.food && (it.grams == null || it.question)).length;
+  return noGrams ? `وزن ${toPersianDigits(noGrams)} آیتم علامت‌دار را وارد کن.` : null;
+}
 
 const DENIED = "دسترسی داده نشد. از تنظیمات گوشی اجازه را بده یا متن بنویس.";
 /** Reading a photo usually takes 10–20 s; past this the request is dropped and the user can retry. */
@@ -28,6 +39,8 @@ export default function Log() {
   const [phase, setPhase] = useState<"input" | "reading" | "review">("input");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [denied, setDenied] = useState(false);
+  const ink2 = useCSSVariable("--color-ink-2") as string;
   // Set once the meal is saved or the user chose to discard it; the sheet then closes without asking.
   const [leaving, setLeaving] = useState(false);
   const [closeAfterSave, setCloseAfterSave] = useState(false);
@@ -66,7 +79,10 @@ export default function Log() {
     setError(null);
     const r = await pickPhoto(from);
     if (r.ok) setPhoto(r.photo);
-    else if (r.reason === "denied") setError(DENIED);
+    else if (r.reason === "denied") {
+      setError(DENIED);
+      setDenied(true);
+    }
     else if (r.reason === "failed") setError("عکس خوانده نشد. یک عکس دیگر امتحان کن.");
   }
 
@@ -136,11 +152,11 @@ export default function Log() {
     <Screen>
       <View className="flex-row items-center justify-between">
         <View>
-          <Text className="font-heavy text-[22px] leading-[34px]">{phase === "review" ? "درست فهمیدم؟" : "چی خوردی؟"}</Text>
+          <Text accessibilityRole="header" className="font-heavy text-[22px] leading-[34px]">{phase === "review" ? "همین‌ها بود؟" : "چه خوردی؟"}</Text>
           {date && <Text className="text-xs text-ink-2">برای {faDayWord(date, localToday())}</Text>}
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="بستن" onPress={close} className="size-10 items-center justify-center rounded-full active:bg-track">
-          <Text className="text-xl text-ink-2">×</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="بستن" onPress={close} className="size-11 items-center justify-center rounded-full active:bg-track">
+          <X color={ink2} size={22} />
         </Pressable>
       </View>
 
@@ -148,7 +164,7 @@ export default function Log() {
         <View>
           <Image source={{ uri: photo.uri }} accessibilityLabel="عکس وعده" className={`w-full rounded-card ${phase === "review" ? "h-32" : "aspect-[4/3]"}`} resizeMode="cover" />
           {phase === "input" && (
-            <Pressable accessibilityRole="button" onPress={() => setPhoto(null)} className="absolute end-2 top-2 rounded-full bg-ink/70 px-3 py-1.5">
+            <Pressable accessibilityRole="button" onPress={() => setPhoto(null)} className="absolute end-2 top-2 min-h-11 justify-center rounded-full bg-ink/70 px-4">
               <Text className="text-xs text-ground">حذف عکس</Text>
             </Pressable>
           )}
@@ -174,7 +190,12 @@ export default function Log() {
             <Button className="flex-1" variant="quiet" label="از گالری" onPress={() => choose("library")} />
           </View>
           {error && <Text accessibilityRole="alert" className="text-sm text-error">{error}</Text>}
-          <Button label="بررسی" disabled={!text.trim() && !photo} onPress={read} />
+          {denied && (
+            <Pressable accessibilityRole="button" onPress={() => void Linking.openSettings()} className="min-h-11 justify-center self-start active:opacity-70">
+              <Text className="font-strong text-sm text-green-ink">باز کردن تنظیمات</Text>
+            </Pressable>
+          )}
+          <Button label="پیدا کردن غذاها" disabled={!text.trim() && !photo} onPress={read} />
           <Text className="text-xs leading-6 text-ink-2">عددها از جدول غذاها حساب می‌شوند، نه از هوش مصنوعی. قبل از ثبت همه را می‌بینی و می‌توانی عوض کنی.</Text>
         </View>
       )}
@@ -182,7 +203,7 @@ export default function Log() {
       {phase === "reading" && (
         <View accessibilityLiveRegion="polite" className="items-center gap-3 rounded-card bg-mint p-6">
           <ActivityIndicator colorClassName="accent-green-ink" />
-          <Text className="text-[15px] text-green-ink">{photo ? "دارم عکس را نگاه می‌کنم…" : "دارم غذاها را پیدا می‌کنم…"}</Text>
+          <Text className="text-[15px] text-green-ink">{photo ? "در حال نگاه کردن به عکس…" : "در حال پیدا کردن غذاها…"}</Text>
           <Pressable accessibilityRole="button" onPress={cancelReading} className="min-h-11 justify-center rounded-btn px-4 active:bg-surface">
             <Text className="font-strong text-sm text-green-ink">لغو</Text>
           </Pressable>
@@ -191,18 +212,19 @@ export default function Log() {
 
       {phase === "review" && draft && (
         <View className="gap-4">
-          {text.trim() !== "" && <Text className="rounded-btn bg-track px-3 py-2 text-sm text-ink-2">«{text.trim()}»</Text>}
+          {text.trim() !== "" && <Text className="rounded-btn bg-track px-3 py-2 text-sm text-ink">«{text.trim()}»</Text>}
           <DraftCard draft={draft} busy={busy} onChange={change} />
-          {draft.estimated && <Text className="text-xs leading-6 text-ink-2">آیتم‌های خط‌چین از روی عکس تخمین زده شده‌اند؛ اگر مقدار را می‌دانی، درستش کن.</Text>}
+          {draft.estimated && <Text className="text-xs leading-6 text-ink-2">مقدارهایی که با ≈ آمده‌اند تخمینی‌اند؛ اگر مقدار را می‌دانی، درستش کن.</Text>}
           {error && <Text accessibilityRole="alert" className="text-sm text-error">{error}</Text>}
+          {notReadyHint(draft) && <Text className="text-sm leading-6 text-fat-ink">{notReadyHint(draft)}</Text>}
           <Button
-            label={draft.ready ? `ثبت ${mealLabel(draft.meal_type)}` : "اول وزن آیتم‌های علامت‌دار را کامل کن"}
+            label={`ثبت ${mealLabel(draft.meal_type)}`}
             busyLabel="در حال ثبت…"
             busy={busy}
             disabled={!draft.ready || draft.items.length === 0}
             onPress={confirm}
           />
-          <Button variant="quiet" label="از اول" disabled={busy} onPress={() => {
+          <Button variant="quiet" label="ویرایش متن" disabled={busy} onPress={() => {
             void api.draftCancel(draft.id);
             setDraft(null);
             setPhase("input");
