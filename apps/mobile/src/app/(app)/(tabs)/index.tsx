@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, PanResponder, Pressable, RefreshControl, View } from "react-native";
 import { useCSSVariable } from "uniwind";
 import { DayStrip } from "@/features/day/day-strip";
+import { QuickRepeats } from "@/features/day/quick-repeats";
 import { api } from "@/lib/api";
 import { addDays, faDayLabel, faDayWord, faInt } from "@/lib/format";
 import { MEALS } from "@/lib/meals";
@@ -196,6 +197,9 @@ export default function Today() {
           </View>
 
           {line && <NutiSays mood={line.mood} text={line.text} />}
+
+          {/* Repeats are logged "now", so they only make sense on today. */}
+          {isToday && <QuickRepeats repeats={data.day.repeats} />}
 
           <Button
             label={isToday ? "ثبت وعده" : `ثبت وعده برای ${faDayWord(shown, today)}`}

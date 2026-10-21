@@ -1,4 +1,4 @@
-import type { AppDay, AppItem, AppProfile, BotResult, DayView, DraftView, Goals, ReportView } from "@nutivo/core";
+import type { AppAskOption, AppAskReply, AppDay, AppItem, AppProfile, BotResult, DayView, DraftView, Goals, ReportView } from "@nutivo/core";
 import { config } from "./config";
 import { supabase } from "./supabase";
 
@@ -69,4 +69,16 @@ export const api = {
   itemUpdate: (id: string, change: { qty: number; unit: string } | { grams: number }) => call<{ updated: true }>("item_update", { id, change }),
   itemDelete: (id: string) => call<{ deleted: true }>("item_delete", { id }),
   units: (foodId: string) => call<string[]>("units", { food_id: foodId }),
+  /** One tap: logs one of the day's repeat suggestions (`day.repeats`) again, now. */
+  repeat: (id: string) => call<{ entry_id: string; label: string; day: DayView | null }>("repeat", { id, now: new Date().toISOString() }),
+  /** «بپرس»: three options for what to eat next, from today's remaining budget. */
+  ask: (question: string) => call<AppAskReply>("ask", { question, hour: new Date().getHours() }),
+  /** «همین را خوردم» on an «بپرس» option. */
+  askLog: (o: AppAskOption, mealType: MealType) =>
+    call<{ entry_id: string; label: string }>("ask_log", {
+      meal_type: mealType,
+      label: o.name,
+      items: o.items.map(({ food_id, qty, unit, grams }) => ({ food_id, qty, unit, grams })),
+      now: new Date().toISOString(),
+    }),
 };
