@@ -1,4 +1,4 @@
-import { ChevronLeft, Globe, LogOut, MessageCircle, Phone, Shield, Target } from "lucide-react";
+import { ChevronLeft, Globe, KeyRound, LogOut, MessageCircle, Phone, Shield, Target } from "lucide-react";
 import Link from "next/link";
 import { DeleteAccount } from "@/features/account/ui/delete-account";
 import { signOutAction } from "@/features/auth/actions";
@@ -28,7 +28,7 @@ async function telegramStatus(): Promise<string | null | undefined> {
 }
 
 /** Email and a one-line goals summary for the account rows. Undefined in review mode. */
-async function account(): Promise<{ email: string | null; goals: string | null } | undefined> {
+async function account(): Promise<{ email: string | null; goals: string | null; hasPassword: boolean } | undefined> {
   if (isAuthDisabled() || !isSupabaseConfigured()) return undefined;
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
@@ -37,6 +37,7 @@ async function account(): Promise<{ email: string | null; goals: string | null }
   return {
     email: data.user.email ?? null,
     goals: p?.goal_kcal ? `${faInt(Number(p.goal_kcal))} کالری · ${faInt(Number(p.goal_protein_g))} گرم پروتئین` : null,
+    hasPassword: data.user.user_metadata?.has_password === true,
   };
 }
 
@@ -70,6 +71,18 @@ export default async function MePage() {
               <ChevronLeft size={18} strokeWidth={1.75} className="text-ink-2" aria-hidden />
             </Link>
           </li>
+          {me && (
+            <li className="border-t border-line">
+              <Link href="/me/password" className="flex items-center gap-3 px-4 py-3.5 hover:bg-mint">
+                <span className="grid size-9 place-items-center rounded-full bg-mint text-green-ink"><KeyRound size={18} strokeWidth={2} aria-hidden /></span>
+                <span className="flex-1">
+                  <span className="block text-[15px] font-semibold">{me.hasPassword ? "عوض کردن رمز" : "گذاشتن رمز (اختیاری)"}</span>
+                  <span className="block text-xs text-ink-2">{me.hasPassword ? "ورود با ایمیل و رمز فعال است" : "برای ورود بدون منتظر ماندن برای کد"}</span>
+                </span>
+                <ChevronLeft size={18} strokeWidth={1.75} className="text-ink-2" aria-hidden />
+              </Link>
+            </li>
+          )}
           <li className="border-t border-line">
             <NutiToggle />
           </li>

@@ -19,6 +19,7 @@ export default function AppLayout() {
           <Stack.Screen name="item/[id]" options={{ presentation: "modal" }} />
           <Stack.Screen name="profile" />
           <Stack.Screen name="delete-account" />
+          <Stack.Screen name="password" />
         </Stack>
       </HealthProvider>
     </RemindersProvider>

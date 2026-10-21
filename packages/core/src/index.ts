@@ -13,3 +13,4 @@ export * from "./prompts/ask";
 export * from "./bot";
 export * from "./mascot";
 export * from "./auth";
+export * from "./password";

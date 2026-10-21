@@ -1,11 +1,12 @@
 "use client";
-import { countdownFa, OTP_LENGTH, OTP_VALID_MINUTES, otpDigits, RESEND_SECONDS, toPersianDigits } from "@nutivo/core";
-import { KeyRound, Mail } from "lucide-react";
+import { countdownFa, OTP_LENGTH, OTP_VALID_MINUTES, otpDigits, RESEND_SECONDS } from "@nutivo/core";
+import { KeyRound, Lock, Mail } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { sendCodeAction, verifyCodeAction } from "./actions";
+import { sendCodeAction, signInWithPasswordAction, verifyCodeAction } from "./actions";
+import { CodeTimer, SpamHint } from "./code-timer";
 
-/** Seconds left before the code can be sent again, ticking once a second. */
-function useCountdown(): [number, () => void] {
+/** Seconds left of a `seconds`-long countdown, ticking once a second; the second value restarts it. */
+function useCountdown(seconds: number): [number, () => void] {
   const [until, setUntil] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -15,19 +16,26 @@ function useCountdown(): [number, () => void] {
   }, [until, now]);
   return [Math.max(0, (until - now) / 1000), () => {
     setNow(Date.now());
-    setUntil(Date.now() + RESEND_SECONDS * 1000);
+    setUntil(Date.now() + seconds * 1000);
   }];
 }
 
-/** Email, then the six-digit code from the email (the email's button is a backup that signs in this browser). */
+/**
+ * Email, then the six-digit code from the email (the email's button is a backup that signs in this browser).
+ * Someone who set a password in «من» can use the «با رمز» tab instead.
+ */
 export function LoginForm({ linkExpired = false }: { linkExpired?: boolean }) {
   const [step, setStep] = useState<"email" | "code">("email");
+  const [mode, setMode] = useState<"code" | "password">("code");
+  const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const [left, restart] = useCountdown();
+  const [left, restart] = useCountdown(RESEND_SECONDS);
+  // The code itself is valid for an hour (otp_expiry); shown as نوتی's countdown.
+  const [valid, restartValid] = useCountdown(OTP_VALID_MINUTES * 60);
   const codeRef = useRef<HTMLInputElement>(null);
 
   const send = (again = false) =>
@@ -37,6 +45,7 @@ export function LoginForm({ linkExpired = false }: { linkExpired?: boolean }) {
       const r = await sendCodeAction(email);
       if (!r.ok) return setError(r.error);
       restart();
+      restartValid();
       setStep("code");
       setCode("");
       if (again) setNotice("یک کد تازه فرستادیم. کد قبلی دیگر کار نمی‌کند.");
@@ -51,15 +60,46 @@ export function LoginForm({ linkExpired = false }: { linkExpired?: boolean }) {
       if (!r.ok) setError(r.error);
     });
 
+  const signIn = () =>
+    start(async () => {
+      setError(null);
+      // On success the action redirects; anything that comes back is an error.
+      const r = await signInWithPasswordAction(email, password);
+      if (!r.ok) setError(r.error);
+    });
+
   if (step === "email") {
     return (
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          send();
+          if (mode === "code") send();
+          else signIn();
         }}
         className="grid gap-3"
       >
+        <div role="radiogroup" aria-label="روش ورود" className="grid grid-cols-2 rounded-full bg-track p-1">
+          {(
+            [
+              ["code", "با کد ایمیل"],
+              ["password", "با رمز"],
+            ] as const
+          ).map(([m, l]) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={mode === m}
+              onClick={() => {
+                setMode(m);
+                setError(null);
+              }}
+              className={`min-h-10 rounded-full text-sm transition-colors ${mode === m ? "bg-surface font-semibold text-green-ink shadow-[var(--shadow-soft)]" : "text-ink"}`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
         {linkExpired && (
           <p role="alert" className="rounded-[var(--radius-btn)] bg-error/10 p-3 text-sm leading-7 text-error">
             این لینک منقضی شده یا قبلاً استفاده شده. ایمیلت را بزن تا یک کد تازه بفرستیم.
@@ -85,11 +125,39 @@ export function LoginForm({ linkExpired = false }: { linkExpired?: boolean }) {
             className="h-12 min-w-0 flex-1 bg-transparent text-left text-[15px] outline-none placeholder:text-ink-2"
           />
         </div>
-        {error && <p role="alert" className="text-sm text-error">{error}</p>}
+        {mode === "password" && (
+          <>
+            <label htmlFor="password" className="text-sm font-semibold">رمز</label>
+            <div className="flex items-center gap-2 rounded-[var(--radius-btn)] border border-line bg-surface px-3 focus-within:border-green">
+              <Lock size={18} strokeWidth={1.75} className="text-ink-2" aria-hidden />
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                dir="ltr"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError(null);
+                }}
+                className="h-12 min-w-0 flex-1 bg-transparent text-left text-[15px] outline-none"
+              />
+            </div>
+          </>
+        )}
+        {error && <p role="alert" className="text-sm leading-6 text-error">{error}</p>}
         <button type="submit" disabled={pending} className="h-12 rounded-[var(--radius-btn)] bg-green-ink text-[15px] font-semibold text-surface transition-opacity duration-150 disabled:opacity-60">
-          {pending ? "در حال ارسال…" : "ارسال کد ورود"}
+          {mode === "code" ? (pending ? "در حال ارسال…" : "ارسال کد ورود") : pending ? "در حال ورود…" : "ورود"}
         </button>
-        <p className="text-xs leading-6 text-ink-2">رمز عبور لازم نیست. هر بار یک کد یک‌بارمصرف به ایمیلت می‌آید.</p>
+        {mode === "code" ? (
+          <p className="text-xs leading-6 text-ink-2">رمز لازم نیست. یک کد یک‌بارمصرف به ایمیلت می‌آید. بعد از ورود می‌توانی رمز هم بگذاری.</p>
+        ) : (
+          <button type="button" onClick={() => setMode("code")} className="min-h-10 justify-self-start text-sm text-green-ink hover:underline">
+            رمز را فراموش کردی؟ با کد وارد شو
+          </button>
+        )}
       </form>
     );
   }
@@ -102,9 +170,10 @@ export function LoginForm({ linkExpired = false }: { linkExpired?: boolean }) {
       }}
       className="grid gap-3"
     >
-      <div role="status" className="rounded-[var(--radius-card)] bg-mint p-4 text-[15px] leading-7">
-        کد شش‌رقمی به <bdi dir="ltr" className="font-semibold">{email.trim().toLowerCase()}</bdi> فرستاده شد. تا {toPersianDigits(String(OTP_VALID_MINUTES))} دقیقه معتبر است. اگر نیامد، پوشه اسپم را هم ببین.
-      </div>
+      <CodeTimer secondsLeft={valid} />
+      <p role="status" className="text-center text-[15px] leading-7">
+        کد شش‌رقمی به <bdi dir="ltr" className="font-semibold">{email.trim().toLowerCase()}</bdi> فرستاده شد.
+      </p>
       <label htmlFor="code" className="text-sm font-semibold">کد ورود</label>
       <div className="flex items-center gap-2 rounded-[var(--radius-btn)] border border-line bg-surface px-3 focus-within:border-green">
         <KeyRound size={18} strokeWidth={1.75} className="text-ink-2" aria-hidden />
@@ -148,6 +217,7 @@ export function LoginForm({ linkExpired = false }: { linkExpired?: boolean }) {
           ایمیل را عوض کن
         </button>
       </div>
+      <SpamHint />
     </form>
   );
 }

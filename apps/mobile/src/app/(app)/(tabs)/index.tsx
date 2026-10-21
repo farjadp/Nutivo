@@ -4,6 +4,7 @@ import { Footprints, UserRound } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, PanResponder, Pressable, RefreshControl, View } from "react-native";
 import { useCSSVariable } from "uniwind";
+import { PasswordOffer } from "@/features/auth/password-offer";
 import { DayStrip } from "@/features/day/day-strip";
 import { QuickRepeats } from "@/features/day/quick-repeats";
 import { api } from "@/lib/api";
@@ -148,6 +149,8 @@ export default function Today() {
           <UserRound color={ink2} size={20} strokeWidth={1.75} />
         </Pressable>
       </View>
+
+      {isToday && <PasswordOffer />}
 
       {data && today && shown && <DayStrip strip={data.strip} today={today} selected={shown} onSelect={(d) => setDate(d)} />}
 

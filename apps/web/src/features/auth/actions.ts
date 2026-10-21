@@ -1,5 +1,5 @@
 "use server";
-import { OTP_LENGTH, otpDigits, sendErrorFa, verifyErrorFa } from "@nutivo/core";
+import { OTP_LENGTH, otpDigits, passwordProblem, passwordSignInErrorFa, sendErrorFa, setPasswordErrorFa, verifyErrorFa } from "@nutivo/core";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -45,6 +45,33 @@ export async function verifyCodeAction(rawEmail: string, rawCode: string): Promi
   if (error) return { ok: false, error: verifyErrorFa(error) };
   // /today sends an account without goals on to onboarding.
   redirect("/today");
+}
+
+/** Email and password, for someone who set a password in «من». Redirects on success. */
+export async function signInWithPasswordAction(rawEmail: string, password: string): Promise<AuthResult> {
+  if (!isSupabaseConfigured()) return { ok: false, error: "سرویس ورود هنوز راه‌اندازی نشده." };
+  const email = Email.safeParse(rawEmail);
+  if (!email.success) return { ok: false, error: "ایمیل معتبر نیست." };
+  if (!password) return { ok: false, error: "رمز را بنویس." };
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({ email: email.data, password });
+  if (error) return { ok: false, error: passwordSignInErrorFa(error) };
+  void logEvent({ kind: "activity", event: "auth.password_sign_in", actor_email: email.data, meta: { channel: "web" } });
+  redirect("/today");
+}
+
+/** Sets or changes the optional password for the signed-in account. */
+export async function setPasswordAction(password: string, repeat: string): Promise<AuthResult> {
+  const problem = passwordProblem(password, repeat);
+  if (problem) return { ok: false, error: problem };
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) redirect("/login");
+  // has_password lets «من» say «عوض کردن رمز» and stop offering one.
+  const { error } = await supabase.auth.updateUser({ password, data: { has_password: true } });
+  if (error) return { ok: false, error: setPasswordErrorFa(error) };
+  void logEvent({ kind: "activity", event: "auth.password_set", actor_id: data.user.id, meta: { channel: "web" } });
+  return { ok: true };
 }
 
 /** Ends the session in this browser only; other devices stay signed in. */
