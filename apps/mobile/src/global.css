@@ -27,6 +27,9 @@
       --color-error: #dc2626;
       --color-track: #eef0f2;
       --color-on-green: #ffffff;
+      /* ناخنک's card: deep plum with light text in both themes. */
+      --color-night: #66023c;
+      --color-on-night: #faf9f6;
     }
     @variant dark {
       --color-ground: #101315;
@@ -47,6 +50,8 @@
       --color-error: #f26b6b;
       --color-track: #252b30;
       --color-on-green: #101315;
+      --color-night: #3d0d2c;
+      --color-on-night: #f6e9f0;
     }
   }
 }

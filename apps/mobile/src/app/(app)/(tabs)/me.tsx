@@ -10,6 +10,7 @@ import { ReminderRows } from "@/features/reminders/reminder-rows";
 import { api } from "@/lib/api";
 import { faInt } from "@/lib/format";
 import { useSession } from "@/lib/session";
+import { Nakhonak } from "@/ui/nakhonak";
 import { Nuti } from "@/ui/nuti";
 import { Screen } from "@/ui/screen";
 import { Text } from "@/ui/text";
@@ -73,6 +74,25 @@ function NutiRow() {
         <Text className="text-xs text-ink-2">{on ? "دستیار بامزه روشن است" : "حالت ساده: فقط اعداد و پیشنهاد"}</Text>
       </View>
       <Switch importantForAccessibility="no-hide-descendants" accessibilityElementsHidden value={on} onValueChange={(v) => void toggle(v)} trackColor={{ true: green, false: track }} />
+    </Pressable>
+  );
+}
+
+/** «حالت شیطان»: opens «پرونده‌ی ناخنک», where the switch and the rules live. */
+function NakhonakRow() {
+  const { me } = useSession();
+  const ink2 = useCSSVariable("--color-ink-2") as string;
+  const on = me?.nakhonak_enabled ?? false;
+  return (
+    <Pressable accessibilityRole="button" onPress={() => router.push("/nakhonak")} className="min-h-14 flex-row items-center gap-3 px-4 py-3 active:bg-track">
+      <View className="size-6 items-center justify-center overflow-hidden">
+        <Nakhonak mood={on ? "sly" : "gentle"} size={30} />
+      </View>
+      <View className="flex-1">
+        <Text className="text-[15px]">حالت شیطان</Text>
+        <Text className="text-xs text-ink-2">{on ? "ناخنک روشن است · پرونده و امتیاز" : "ناخنک، رقیب قصه‌گو. خاموش"}</Text>
+      </View>
+      <ChevronLeft color={ink2} size={18} />
     </Pressable>
   );
 }
@@ -224,6 +244,8 @@ export default function Me() {
 
       <Section title="تنظیمات">
         <NutiRow />
+        <Divider />
+        <NakhonakRow />
         <Divider />
         {profile ? <TelegramRow linkedAs={profile.telegram} onLinked={loadProfile} /> : <View className="min-h-14" />}
       </Section>

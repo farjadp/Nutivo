@@ -7,6 +7,7 @@ import { useCSSVariable } from "uniwind";
 import { PasswordOffer } from "@/features/auth/password-offer";
 import { DayStrip } from "@/features/day/day-strip";
 import { QuickRepeats } from "@/features/day/quick-repeats";
+import { NakhonakCard } from "@/features/nakhonak/nakhonak-card";
 import { api } from "@/lib/api";
 import { addDays, faDayLabel, faDayWord, faInt } from "@/lib/format";
 import { MEALS } from "@/lib/meals";
@@ -127,7 +128,9 @@ export default function Today() {
   );
 
   const isToday = shown === today;
-  const nutiOn = useSession().me?.nuti_enabled ?? true;
+  const { me } = useSession();
+  const nutiOn = me?.nuti_enabled ?? true;
+  const nakhonakOn = me?.nakhonak_enabled ?? false;
   const health = useHealth();
   const act = isToday && health.on ? health.activity : null;
   // Zero is left out: an empty Health Connect reports 0 steps, which says nothing.
@@ -213,6 +216,9 @@ export default function Today() {
           </View>
 
           {line && <NutiSays mood={line.mood} text={line.text} />}
+
+          {/* «حالت شیطان»: today only; reloads when the day's totals change, since the story fits the moment. */}
+          {isToday && nakhonakOn && <NakhonakCard dayKey={`${shown}:${Math.round(data.day.totals.kcal)}:${data.items.length}`} />}
 
           {/* Repeats are logged "now", so they only make sense on today. */}
           {isToday && <QuickRepeats repeats={data.day.repeats} />}

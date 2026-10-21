@@ -1,4 +1,4 @@
-import type { AppAskOption, AppAskReply, AppDay, AppItem, AppProfile, BotResult, DayView, DraftView, Goals, ReportView } from "@nutivo/core";
+import type { AppAskOption, AppAskReply, AppDay, AppItem, AppNakhonak, AppNakhonakToday, AppProfile, BotResult, DayView, DraftView, Goals, ReportView } from "@nutivo/core";
 import { config } from "./config";
 import { supabase } from "./supabase";
 
@@ -9,6 +9,8 @@ export interface Me {
   has_goals: boolean;
   timezone: string;
   nuti_enabled: boolean;
+  /** «حالت شیطان»: ناخنک, off until the user turns it on. */
+  nakhonak_enabled: boolean;
 }
 
 export interface ProfileInput {
@@ -53,6 +55,10 @@ export const api = {
   onboard: (profile: ProfileInput) => call<Goals>("onboard", { profile }),
   profile: () => call<AppProfile>("profile"),
   prefs: (p: { nuti_enabled: boolean }) => call<{ nuti_enabled: boolean }>("prefs", p),
+  /** ناخنک: on/off, today's story and «پرونده‌ی ناخنک». */
+  nakhonak: () => call<AppNakhonak>("nakhonak"),
+  nakhonakPrefs: (on: boolean) => call<AppNakhonak>("nakhonak_prefs", { on }),
+  nakhonakAnswer: (date: string, choice: string) => call<AppNakhonakToday>("nakhonak_answer", { date, choice }),
   /** One-time code (15 minutes) that connects this account to the Telegram bot. */
   linkCode: () => call<{ code: string; url: string | null }>("link_code"),
   deleteAccount: () => call<{ deleted: true }>("delete_account", { confirm: "حذف" }),

@@ -172,7 +172,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
         if (!on) return json({ ok: true, data: { enabled: false, text: `<b>ناخنک</b>\n\n${NAKHONAK_LINES.disabled}`, keyboard: null } });
         const t = await nakhonakToday(user!.userId);
         const msg = t ? nakhonakTelegram(t) : { text: "", keyboard: null };
-        return json({ ok: true, data: { enabled: true, text: `<b>ناخنک</b>\n\n${NAKHONAK_LINES.enabled}\n\n${msg.text}`, keyboard: msg.keyboard } });
+        return json({ ok: true, data: { enabled: true, text: `${NAKHONAK_LINES.enabled}\n\n${msg.text}`, keyboard: msg.keyboard } });
       }
       case "nakhonak_answer": {
         const r = await nakhonakAnswer(user!.userId, String(b.date), String(b.choice));

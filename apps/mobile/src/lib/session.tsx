@@ -15,6 +15,8 @@ interface SessionState {
   signOut: () => Promise<void>;
   /** Switches نوتی on or off for this account (web and bot follow). Returns an error message on failure. */
   setNuti: (on: boolean) => Promise<string | null>;
+  /** Remembers the «حالت شیطان» switch after the server saved it. */
+  setNakhonakFlag: (on: boolean) => void;
 }
 
 const Ctx = createContext<SessionState | null>(null);
@@ -89,6 +91,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setMe(null);
     },
     setNuti,
+    setNakhonakFlag: (on: boolean) => setMe((m) => (m ? { ...m, nakhonak_enabled: on } : m)),
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
