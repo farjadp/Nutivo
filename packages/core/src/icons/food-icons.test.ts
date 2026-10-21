@@ -45,4 +45,9 @@ describe("food icons", () => {
     expect(svg).toContain('aria-label="چلو"');
     expect(foodIconSvg("kebab-joojeh")).toContain('transform="rotate(-35 12 12)"');
   });
+
+  it("does not read «شیرازی» as milk", () => {
+    expect(foodIconName({ name_fa: "سالاد شیرازی" })).toBe("salad");
+    expect(foodIconName({ name_fa: "شیر کم‌چرب" })).toBe("milk");
+  });
 });

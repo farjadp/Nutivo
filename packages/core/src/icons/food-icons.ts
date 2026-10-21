@@ -503,7 +503,7 @@ const RULES: [RegExp, FoodIconName][] = [
   [/قهوه|coffee|espresso|latte/i, "coffee"],
   [/دوغ|doogh|kefir/i, "doogh"],
   [/آبمیوه|juice|smoothie/i, "juice"],
-  [/شیر(?!ینی)|\bmilk\b/i, "milk"],
+  [/شیر(?!ینی|ازی)|\bmilk\b/i, "milk"],
   [/^آب$|\bwater\b/i, "water"],
   [/ماست|yogh?urt/i, "yogurt"],
   [/پنیر|cheese|feta/i, "cheese"],
