@@ -58,6 +58,13 @@
           "cameraPermission": "Nutivo برای ثبت وعده از روی عکس به دوربین دسترسی می‌خواهد.",
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/brand/notification-icon.png",
+          "color": "#007F71"
+        }
       ]
     ],
     "extra": {

@@ -5,6 +5,7 @@ import { ChevronLeft, Globe, LogOut, MessageCircle, Phone, Send, Target, Trash2 
 import { useCallback, useState, type ReactNode } from "react";
 import { ActivityIndicator, Alert, Linking, Pressable, Text as RNText, Switch, View } from "react-native";
 import { useCSSVariable } from "uniwind";
+import { ReminderRows } from "@/features/reminders/reminder-rows";
 import { api } from "@/lib/api";
 import { faInt } from "@/lib/format";
 import { useSession } from "@/lib/session";
@@ -174,6 +175,10 @@ export default function Me() {
         <NutiRow />
         <Divider />
         {profile ? <TelegramRow linkedAs={profile.telegram} /> : <View className="min-h-14" />}
+      </Section>
+
+      <Section title="یادآوری‌ها">
+        <ReminderRows />
       </Section>
 
       <Section title="پشتیبانی">
