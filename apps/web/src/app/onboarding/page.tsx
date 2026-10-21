@@ -1,16 +1,13 @@
-import { OnboardingForm } from "@/features/onboarding/onboarding-form";
+import { OnboardingWizard } from "@/features/onboarding/onboarding-wizard";
 import { isAuthDisabled } from "@/shared/config";
 
-export const metadata = { title: "پروفایل · Nutivo" };
+export const metadata = { title: "شروع · Nutivo" };
 
+/** First run. Editing later uses /me/profile (the plain form, filled with the saved numbers). */
 export default function OnboardingPage() {
   return (
     <main className="mx-auto grid max-w-md gap-6 px-4 py-8">
-      <header className="grid gap-1">
-        <h1 className="text-2xl font-bold">پروفایل و اهداف</h1>
-        <p className="text-[15px] leading-7 text-ink-2">شصت ثانیه. با این‌ها اهداف روزانه‌ات را حساب می‌کنیم.</p>
-      </header>
-      <OnboardingForm local={isAuthDisabled()} />
+      <OnboardingWizard local={isAuthDisabled()} />
     </main>
   );
 }
