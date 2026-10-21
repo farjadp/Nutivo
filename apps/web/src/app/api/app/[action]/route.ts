@@ -6,6 +6,7 @@ import {
   confirmDraft,
   createDraft,
   createLinkCode,
+  logItems,
   dayView,
   editDraft,
   reportFor,
@@ -13,7 +14,9 @@ import {
   undoEntry,
   type Linked,
 } from "@/features/bot/api/service.server";
-import type { BotResult } from "@nutivo/core";
+import { sumMacros, type AppAskReply, type BotResult } from "@nutivo/core";
+import { askWith, usualFromRepeats } from "@/features/ask/api/ask.server";
+import { loadDayFor } from "@/features/today/api/load-day.server";
 import { accountProfile, deleteAccountData, nutiEnabledFor, setNutiEnabled } from "@/features/account/api/account.server";
 import { telegramUsername } from "@/features/bot/api/telegram.server";
 import { dayDetail, deleteItem, foodUnits, itemById, updateItem } from "@/features/mobile/api/day.server";
@@ -67,6 +70,13 @@ const Bodies = {
   units: z.object({ food_id: z.string().min(1).max(80) }),
   repeat: z.object({ id: z.string().max(400), now: Iso }),
   report: Day,
+  ask: z.object({ question: z.string().trim().min(1).max(300), hour: z.number().int().min(0).max(23) }),
+  ask_log: z.object({
+    meal_type: MealType,
+    label: z.string().trim().min(1).max(120),
+    items: z.array(z.object({ food_id: z.string().min(1).max(80), qty: z.number().nonnegative().max(100), unit: z.string().max(40), grams: z.number().positive().max(5000) })).min(1).max(12),
+    now: Iso,
+  }),
   profile: z.object({}),
   prefs: z.object({ nuti_enabled: z.boolean() }),
   link_code: z.object({}),
@@ -75,7 +85,7 @@ const Bodies = {
 } as const;
 type Action = keyof typeof Bodies;
 
-const NEEDS_GOALS = new Set<Action>(["draft", "draft_edit", "draft_confirm", "today", "day", "repeat", "report", "item_update", "item_delete"]);
+const NEEDS_GOALS = new Set<Action>(["draft", "draft_edit", "draft_confirm", "today", "day", "repeat", "report", "item_update", "item_delete", "ask", "ask_log"]);
 
 interface AppUser extends Linked {
   email: string | null;
@@ -121,6 +131,39 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
           ok: true,
           data: { email: user.email, has_goals: user.hasGoals, timezone: user.timezone, nuti_enabled: await nutiEnabledFor(user.userId) },
         });
+      case "ask": {
+        const b = parsed.data as z.infer<(typeof Bodies)["ask"]>;
+        const day = await loadDayFor(adminClient(), user.userId);
+        if (!day) return json(noGoals);
+        const r = await askWith(adminClient(), {
+          question: b.question,
+          hour: b.hour,
+          goals: day.goals,
+          eatenMacros: sumMacros(day.items.map((i) => i.macros)),
+          usual: usualFromRepeats(day.repeats),
+          actorId: user.userId,
+        });
+        if (!r.ok) return json({ ok: false, error: r.error, code: "server" });
+        const data: AppAskReply = {
+          reply: r.reply,
+          slot: r.slot,
+          remaining: r.remaining,
+          options: r.options.map((o) => ({
+            id: o.id,
+            name: o.name,
+            source: o.source,
+            reason: o.reason,
+            kcal: Math.round(o.macros.kcal),
+            protein_g: Math.round(o.macros.protein_g),
+            items: o.items.map((i) => ({ food_id: i.food.id, name: i.food.name_fa, qty: i.qty, unit: i.unit, grams: i.grams })),
+          })),
+        };
+        return json({ ok: true, data });
+      }
+      case "ask_log": {
+        const b = parsed.data as z.infer<(typeof Bodies)["ask_log"]>;
+        return json(await logItems(user, { meal_type: b.meal_type, label: b.label, items: b.items, nowUtc: b.now }));
+      }
       case "profile":
         return json({ ok: true, data: await accountProfile(user.userId, user.email) });
       case "prefs": {

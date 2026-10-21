@@ -81,3 +81,11 @@ export function rankIdeas({ candidates, remaining, slot, limit = 3 }: RankInput)
     .filter((c) => (seen.has(c.name_fa) ? false : (seen.add(c.name_fa), true)))
     .slice(0, limit);
 }
+
+/** Tap-to-ask questions for «بپرس», by the meal that fits the hour (web and app show the same ones). */
+export const ASK_STARTERS: Record<MealType, string[]> = {
+  breakfast: ["صبحانه چی بخورم؟", "یه صبحانه پروتئینی", "یه چیز سبک"],
+  lunch: ["ناهار چی بخورم؟", "یه ناهار سبک", "یه چیز بی‌گوشت"],
+  snack: ["یه میان‌وعده پروتئینی", "یه چیز شیرین ولی سبک", "شام چی بخورم؟"],
+  dinner: ["شام چی بخورم؟", "یه شام سبک", "یه چیز پروتئینی"],
+};

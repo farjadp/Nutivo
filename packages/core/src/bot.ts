@@ -150,3 +150,22 @@ export interface AppProfile {
   /** «@username», a first name, or null when the bot isn't linked. */
   telegram: string | null;
 }
+
+/** One «بپرس» suggestion for the app. Numbers come from the engine; the items are what «همین را خوردم» logs. */
+export interface AppAskOption {
+  id: string;
+  name: string;
+  /** "history": one of the user's own usual meals. */
+  source: "idea" | "history";
+  reason: string;
+  kcal: number;
+  protein_g: number;
+  items: { food_id: string; name: string; qty: number; unit: string; grams: number }[];
+}
+
+export interface AppAskReply {
+  reply: string;
+  slot: MealType;
+  remaining: { kcal: number; protein_g: number };
+  options: AppAskOption[];
+}

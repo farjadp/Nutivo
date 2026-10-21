@@ -348,6 +348,24 @@ export async function addRepeat(user: Linked, repeatId: string, nowUtc: string):
   return { ok: true, data: { entry_id: res.entry_id, label: repeatLabel(r), day: await dayView(user) } };
 }
 
+/** Logs a ready-made list of foods (an «بپرس» pick). Numbers come from the food table in saveMeal, not the client. */
+export async function logItems(
+  user: Linked,
+  m: { meal_type: MealType; label: string; items: { food_id: string; qty: number; unit: string; grams: number }[]; nowUtc: string },
+): Promise<BotResult<{ entry_id: string; label: string }>> {
+  const { data: auth } = await db().auth.admin.getUserById(user.userId);
+  const res = await saveMeal(db(), { id: user.userId, email: auth.user?.email ?? null }, {
+    meal_type: m.meal_type,
+    raw_input: m.label,
+    input_channel: channelOf(user),
+    photo_path: null,
+    eaten_at: isoInTz(new Date(m.nowUtc), user.timezone),
+    items: m.items.map((i) => ({ food_id: i.food_id, name_raw: m.label, qty: i.qty, unit: i.unit, grams: i.grams, is_estimated: false, confidence: "high" as const })),
+  });
+  if (!res.ok) return fail(res.error, "server");
+  return { ok: true, data: { entry_id: res.entry_id, label: m.label } };
+}
+
 // ---------------------------------------------------------------------------
 // Card and report
 // ---------------------------------------------------------------------------

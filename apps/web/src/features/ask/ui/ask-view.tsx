@@ -1,5 +1,5 @@
 "use client";
-import { macrosForGrams, mealSlot, suggestRepeats, type MealType } from "@nutivo/core";
+import { ASK_STARTERS, macrosForGrams, mealSlot, suggestRepeats, type MealType } from "@nutivo/core";
 import { Check, SendHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
@@ -18,13 +18,6 @@ import { askAction, type AskOption } from "../api/actions";
 type Msg =
   | { id: number; role: "user"; text: string }
   | { id: number; role: "nuti"; text: string; options: AskOption[]; slot?: MealType; remaining?: { kcal: number; protein_g: number } };
-
-const STARTERS: Record<MealType, string[]> = {
-  breakfast: ["صبحانه چی بخورم؟", "یه صبحانه پروتئینی", "یه چیز سبک"],
-  lunch: ["ناهار چی بخورم؟", "یه ناهار سبک", "یه چیز بی‌گوشت"],
-  snack: ["یه میان‌وعده پروتئینی", "یه چیز شیرین ولی سبک", "شام چی بخورم؟"],
-  dinner: ["شام چی بخورم؟", "یه شام سبک", "یه چیز پروتئینی"],
-};
 
 let seq = 1;
 
@@ -223,7 +216,7 @@ export function AskView({ mode }: { mode: "local" | "live" | "sample" }) {
       <div className="fixed inset-x-0 bottom-0 z-10">
         <div className="mx-auto grid max-w-md gap-2 border-t border-line/60 bg-ground/95 px-4 pt-2.5 pb-3 backdrop-blur-sm">
           <div className="flex gap-2 overflow-x-auto pb-0.5" role="group" aria-label="پیشنهاد سؤال">
-            {STARTERS[slotNow].map((s) => (
+            {ASK_STARTERS[slotNow].map((s) => (
               <button key={s} type="button" disabled={pending} onClick={() => ask(s)} className="shrink-0 rounded-full border border-purple/30 bg-purple-tint px-3 py-1.5 text-[13px] font-medium text-purple-ink disabled:opacity-50">
                 {s}
               </button>
