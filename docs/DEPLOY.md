@@ -30,6 +30,10 @@
 - لوگوی ایمیل از `/brand/nutivo-lockup-email.png` روی آدرس Railway بارگذاری می‌شود؛ با عوض شدن دامنه، `LOGO` را در قالب‌ها هم عوض کن.
 - ایمیل داخلی Supabase در ساعت فقط چند ایمیل می‌فرستد و فرستنده‌اش «Supabase Auth» است؛ برای تسترها و نام فرستنده Nutivo، SMTP اختصاصی لازم است.
 
-## هنوز نه
-- بات تلگرام روی Railway (تا وقتی بات محلی روشن است، دو نسخه با هم تداخل می‌کنند).
-- کرون گزارش شبانه (هر ساعت `GET /api/cron/nightly` با `CRON_SECRET`).
+## بات تلگرام و کرون شبانه
+- سرویس `bot` روی همان پروژه Railway: `railway up --detach --service bot`. ساخت `pnpm --filter @nutivo/bot typecheck`، اجرا `pnpm --filter @nutivo/bot start`، ری‌استارت همیشه. سلامت HTTP ندارد؛ لاگ را ببین.
+- متغیرها همه ارجاع به سرویس web هستند (`${{web.NUTIVO_BOT_SECRET}}`، `${{web.CRON_SECRET}}`، `NUTIVO_API_URL=${{web.NEXT_PUBLIC_APP_URL}}`)؛ رمز تازه لازم نیست.
+- توکن BotFather در پنل ادمین (تنظیمات → بات تلگرام) ذخیره می‌شود؛ بات هر ۱۰ ثانیه چک می‌کند و خودش بالا می‌آید. وب هم برای ارسال گزارش شبانه همان توکن را می‌خواند.
+- همان پروسه بات هر ساعت در دقیقه ۳۰ (UTC) `GET /api/cron/nightly` را با `CRON_SECRET` صدا می‌زند؛ گزارش ساعت ۲۱ و ناخنک ساعت ۲۰ هر کاربر از همین‌جا می‌روند. سرویس cron جدا نداریم.
+- **با بات محلی هم‌زمان اجرا نکن:** دو long polling روی یک توکن با خطای 409 به هم می‌خورند. برای تست محلی از یک بات دوم BotFather استفاده کن.
+- تنظیمات ساخت و اجرای سرویس با `railway environment edit` ذخیره نشد؛ با `railway api` و `serviceInstanceUpdate` ثبت شد.

@@ -1,5 +1,6 @@
 import { createApi } from "./api";
 import { createBot } from "./bot";
+import { startNightlyCron } from "./cron";
 
 const baseUrl = process.env.NUTIVO_API_URL ?? "http://localhost:3000";
 const secret = process.env.NUTIVO_BOT_SECRET;
@@ -31,6 +32,10 @@ async function resolveToken(): Promise<string> {
     await new Promise((r) => setTimeout(r, 10_000));
   }
 }
+
+// Reports and ناخنک run on the clock even before a Telegram token exists.
+if (process.env.CRON_SECRET) startNightlyCron({ baseUrl, secret: process.env.CRON_SECRET });
+else console.info("[cron] CRON_SECRET not set; nightly job is not triggered from here.");
 
 const token = await resolveToken();
 
