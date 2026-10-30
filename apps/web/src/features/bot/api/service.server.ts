@@ -25,6 +25,7 @@ import { buildDailyReport, reportFacts, type ReportView } from "@nutivo/core";
 import { faDayWord } from "@/shared/lib/format";
 import { nutiEnabledFor } from "@/features/account/api/account.server";
 import { logEvent } from "@/lib/server/log";
+import { AI_BUDGET_BOT_MESSAGE, AI_BUDGET_MESSAGE, withinAiBudget } from "@/lib/server/ai-budget";
 import { removeMealPhotos } from "@/lib/server/photos";
 import { dayCardSvg, renderPng } from "./card.server";
 import { adminClient } from "@/lib/supabase/admin";
@@ -206,6 +207,7 @@ export async function createDraft(
 ): Promise<BotResult<DraftView>> {
   const text = (input.text ?? "").slice(0, 600);
   input = { ...input, nowISO: isoInTz(new Date(input.nowISO), user.timezone) };
+  if (!(await withinAiBudget(user.userId))) return fail(channelOf(user) === "telegram" ? AI_BUDGET_BOT_MESSAGE : AI_BUDGET_MESSAGE, "limit");
   try {
     let photo_path: string | null = null;
     if (input.photo) {
@@ -390,7 +392,7 @@ export async function reportFor(user: Linked, date?: string, opts: { write?: boo
   const facts = reportFacts(report, day.goals);
   let stored = await readReport(db(), user.userId, day.date);
   const fresh = stored.analysis && stored.source_hash === itemsHash(day.items);
-  if (!fresh && day.items.length && opts.write !== false) {
+  if (!fresh && day.items.length && opts.write !== false && (await withinAiBudget(user.userId))) {
     const r = await writeAnalysis(day.items, day.goals, day.date, faDayWord(day.date, day.today));
     await storeReport(db(), user.userId, day.date, day.items, day.goals, r);
     void logEvent({ kind: "system", event: "ai.report", actor_id: user.userId, message: `${channelOf(user)} ${day.date}`, meta: { model: r.model, ms: r.ms, ...r.usage, dropped: r.dropped.length, channel: channelOf(user) } });

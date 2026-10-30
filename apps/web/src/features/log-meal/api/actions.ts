@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { anthropicKey } from "@/lib/ai/client";
 import { logEvent } from "@/lib/server/log";
+import { AI_BUDGET_MESSAGE, withinAiBudget } from "@/lib/server/ai-budget";
 import { isAuthDisabled, isSupabaseConfigured, PHOTO_MAX_BYTES, PHOTO_TYPES } from "@/shared/config";
 import type { ActionResult, Draft } from "../model/draft";
 import { ExtractError, extractMeal } from "./extract.server";
@@ -26,6 +27,7 @@ export async function draftMealAction(form: FormData): Promise<ActionResult<Draf
   const local = isAuthDisabled();
   const { supabase, user } = await requireUser();
   if (!user && !local) return { ok: false, error: "برای ثبت باید وارد حساب شوی." };
+  if (user && !(await withinAiBudget(user.id, user.email ?? null))) return { ok: false, error: AI_BUDGET_MESSAGE };
 
   const text = String(form.get("text") ?? "").slice(0, 600);
   const nowISO = String(form.get("now") ?? new Date().toISOString());

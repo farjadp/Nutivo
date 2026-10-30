@@ -23,6 +23,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { foodFromRow } from "@/entities/food/map";
 import { anthropic, reportModel } from "@/lib/ai/client";
 import { logEvent } from "@/lib/server/log";
+import { withinAiBudget } from "@/lib/server/ai-budget";
 import { faInt } from "@/shared/lib/format";
 
 export interface AskOption {
@@ -100,6 +101,9 @@ export async function askWith(supabase: SupabaseClient, { question, hour, goals,
         : "امروز به هدف کالری رسیدی؛ اگه گرسنه‌ای، یه چیز سبک:",
     options: ranked.slice(0, 3).map((r) => ({ ...pool.get(r.id)!, reason: r.source === "history" ? "از همونایی که زیاد می‌خوری." : "" })),
   });
+
+  // Over the daily AI cap: the engine's picks without نوتی's reasons.
+  if (!(await withinAiBudget(actorId))) return fallback();
 
   const t0 = Date.now();
   try {

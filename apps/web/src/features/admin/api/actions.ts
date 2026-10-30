@@ -1,6 +1,7 @@
 "use server";
 import Anthropic from "@anthropic-ai/sdk";
 import { revalidatePath } from "next/cache";
+import { toLatinDigits } from "@nutivo/core";
 import { z } from "zod";
 import { deleteAccountData } from "@/features/account/api/account.server";
 import { logEvent } from "@/lib/server/log";
@@ -78,7 +79,7 @@ export async function deleteUserAction(userId: string, typedEmail: string): Prom
 // ---------------------------------------------------------------------------
 
 const SECRET_KEYS = [SETTING_KEYS.anthropicKey, SETTING_KEYS.openaiKey, SETTING_KEYS.googleKey] as const;
-const VALUE_KEYS = [SETTING_KEYS.anthropicExtractModel, SETTING_KEYS.anthropicReportModel, SETTING_KEYS.openaiTranscribeModel, SETTING_KEYS.reportHour] as const;
+const VALUE_KEYS = [SETTING_KEYS.anthropicExtractModel, SETTING_KEYS.anthropicReportModel, SETTING_KEYS.openaiTranscribeModel, SETTING_KEYS.reportHour, SETTING_KEYS.aiDailyCapUsd] as const;
 
 export async function saveSecretAction(key: string, value: string): Promise<AdminResult> {
   const ctx = await liveAdmin();
@@ -122,6 +123,10 @@ export async function saveValueAction(key: string, value: string): Promise<Admin
   if (key === SETTING_KEYS.reportHour) {
     const n = Number(parsed);
     if (!Number.isInteger(n) || n < 0 || n > 23) return { ok: false, error: "ساعت باید بین ۰ تا ۲۳ باشد." };
+    parsed = n;
+  } else if (key === SETTING_KEYS.aiDailyCapUsd) {
+    const n = Number(toLatinDigits(parsed).replace("٫", "."));
+    if (!Number.isFinite(n) || n < 0 || n > 50) return { ok: false, error: "سقف باید بین ۰ تا ۵۰ دلار باشد (۰ یعنی بدون سقف)." };
     parsed = n;
   } else if (!/^[a-z0-9][a-z0-9._-]{1,80}$/i.test(parsed)) return { ok: false, error: "نام مدل معتبر نیست." };
   const { error } = await adminClient().from("app_settings").upsert({ key, value: parsed, secret_ciphertext: null, secret_last4: null, updated_at: new Date().toISOString(), updated_by: ctx.userId });

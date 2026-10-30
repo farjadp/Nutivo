@@ -96,7 +96,7 @@ export function ProviderCard({ p, live }: { p: ProviderView; live: boolean }) {
   );
 }
 
-export function ValueField({ settingKey, label, hint, initial, live, inputMode }: { settingKey: string; label: string; hint: string; initial: string; live: boolean; inputMode?: "numeric" }) {
+export function ValueField({ settingKey, label, hint, initial, live, inputMode }: { settingKey: string; label: string; hint: string; initial: string; live: boolean; inputMode?: "numeric" | "decimal" }) {
   const [value, setValue] = useState(initial);
   const [res, setRes] = useState<AdminResult | null>(null);
   const [pending, start] = useTransition();

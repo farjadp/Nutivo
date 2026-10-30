@@ -48,7 +48,7 @@ export interface DayView {
   repeats: { id: string; label: string; meal_type: MealType }[];
 }
 
-export type BotResult<T> = { ok: true; data: T } | { ok: false; error: string; code?: "not_linked" | "no_goals" | "bad_request" | "not_found" | "server" };
+export type BotResult<T> = { ok: true; data: T } | { ok: false; error: string; code?: "not_linked" | "no_goals" | "bad_request" | "not_found" | "server" | "limit" };
 
 // ---------------------------------------------------------------------------
 // Nightly report in Telegram (shared by the bot and the web app's nightly push)

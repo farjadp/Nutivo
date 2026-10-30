@@ -119,6 +119,7 @@ export default async function SettingsPage() {
           <ValueField live={ctx.live} settingKey={SETTING_KEYS.anthropicReportModel} label="مدل گزارش شبانه" hint="متن تحلیل گزارش. پیش‌فرض: claude-sonnet-5-5" initial={value(SETTING_KEYS.anthropicReportModel, process.env.NUTIVO_REPORT_MODEL || "claude-sonnet-5-5")} />
           <ValueField live={ctx.live} settingKey={SETTING_KEYS.openaiTranscribeModel} label="مدل تبدیل صدا (OpenAI)" hint="برای ثبت صوتی. مثلاً whisper-1" initial={value(SETTING_KEYS.openaiTranscribeModel, "whisper-1")} />
           <ValueField live={ctx.live} inputMode="numeric" settingKey={SETTING_KEYS.reportHour} label="ساعت گزارش شبانه" hint="به وقت محلی هر کاربر، ۰ تا ۲۳." initial={value(SETTING_KEYS.reportHour, process.env.NUTIVO_REPORT_HOUR_LOCAL || "21")} />
+          <ValueField live={ctx.live} inputMode="decimal" settingKey={SETTING_KEYS.aiDailyCapUsd} label="سقف هزینه AI هر کاربر (دلار)" hint="در ۲۴ ساعت گذشته، با قیمت صفحه متریک‌ها. ادمین‌ها سقف ندارند؛ ۰ یعنی بدون سقف." initial={value(SETTING_KEYS.aiDailyCapUsd, process.env.NUTIVO_AI_DAILY_CAP_USD || "0.5")} />
         </div>
       </Panel>
     </>

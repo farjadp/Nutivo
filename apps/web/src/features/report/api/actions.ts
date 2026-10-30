@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { LoggedItem } from "@/entities/day/sample";
 import { foodFromRow } from "@/entities/food/map";
 import { logEvent } from "@/lib/server/log";
+import { AI_BUDGET_REPORT_MESSAGE, withinAiBudget } from "@/lib/server/ai-budget";
 import { createClient } from "@/lib/supabase/server";
 import { localDate } from "@/features/today/api/load-day.server";
 import { isAuthDisabled, isSupabaseConfigured } from "@/shared/config";
@@ -63,6 +64,7 @@ export async function generateReportAction(date: string): Promise<ReportResult> 
   const { data: auth } = await supabase.auth.getUser();
   const user = auth.user;
   if (!user) return { ok: false, error: "برای گزارش باید وارد حساب شوی." };
+  if (!(await withinAiBudget(user.id, user.email ?? null))) return { ok: false, error: AI_BUDGET_REPORT_MESSAGE };
   try {
     const { data: profile } = await supabase.from("profiles").select("timezone, goal_kcal, goal_protein_g, goal_carbs_g, goal_fat_g").eq("id", user.id).maybeSingle();
     if (!profile?.goal_kcal) return { ok: false, error: "اول هدف‌هایت را تعیین کن." };

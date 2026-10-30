@@ -11,6 +11,8 @@ export const SETTING_KEYS = {
   openaiTranscribeModel: "ai.openai.transcribe_model",
   googleKey: "ai.google.api_key",
   reportHour: "app.report_hour_local",
+  /** Per-user AI spend cap in USD over the last 24 hours; 0 = off. */
+  aiDailyCapUsd: "ai.daily_cap_usd",
   telegramToken: "bot.telegram.token",
   /** Filled automatically from Telegram getMe when the token is saved. */
   telegramUsername: "bot.telegram.username",
